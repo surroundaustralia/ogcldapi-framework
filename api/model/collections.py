@@ -43,7 +43,13 @@ class CollectionsRenderer(ContainerRenderer):
             default_profile_token="oai"
         )
 
+        self.ALLOWED_PARAMS = ["_profile", "_view", "_mediatype", "_format", "page", "per_page"]
+
     def render(self):
+        for v in self.request.values.items():
+            if v[0] not in self.ALLOWED_PARAMS:
+                return Response("The parameter {} you supplied is not allowed".format(v[0]), status=400)
+
         # try returning alt profile
         response = super().render()
         if response is not None:

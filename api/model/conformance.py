@@ -15,7 +15,13 @@ class ConformanceRenderer(Renderer):
 
         super().__init__(request, LANDING_PAGE_URL + "/conformance", {"oai": profile_openapi}, "oai")
 
+        self.ALLOWED_PARAMS = ["_profile", "_view", "_mediatype", "_format"]
+
     def render(self):
+        for v in self.request.values.items():
+            if v[0] not in self.ALLOWED_PARAMS:
+                return Response("The parameter {} you supplied is not allowed".format(v[0]), status=400)
+
         # try returning alt profile
         response = super().render()
         if response is not None:
@@ -28,7 +34,7 @@ class ConformanceRenderer(Renderer):
 
     def _render_oai_json(self):
         page_json = {
-            "links": self.conformance_classes
+            "conformsTo": self.conformance_classes
         }
 
         return Response(

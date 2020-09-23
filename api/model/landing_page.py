@@ -78,7 +78,13 @@ class LandingPageRenderer(Renderer):
         # add OGC API Link headers to pyLDAPI Link headers
         self.headers["Link"] = self.headers["Link"] + ", ".join([link.render_as_http_header() for link in self.landing_page.links])
 
+        self.ALLOWED_PARAMS = ["_profile", "_view", "_mediatype", "_format"]
+
     def render(self):
+        for v in self.request.values.items():
+            if v[0] not in self.ALLOWED_PARAMS:
+                return Response("The parameter {} you supplied is not allowed".format(v[0]), status=400)
+
         # try returning alt profile
         response = super().render()
         if response is not None:
