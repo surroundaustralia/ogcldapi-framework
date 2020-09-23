@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <link rel="shortcut icon" href="{{ url_for('static', filename="favicon.ico") }}">
-  <title>{{ title }}</title>
+  <title>{% if title|length > 0 %}{{ title }}{% else %}{{ API_TITLE }}{% endif %}</title>
   <style>
     html, body {
       margin: 0 auto;
@@ -22,7 +22,7 @@
       background-color: lightgrey;
 
       display: grid;
-      grid-template-columns: auto 200px 800px auto;
+      grid-template-columns: auto 1000px auto;
     }
 
     nav {
@@ -103,14 +103,16 @@
 </head>
 <body>
   <header>
-    <div style="grid-column: 2; display:grid;">
-      <h1 style="grid-column: 2; font-size:80px;">{{ title }}</h1>
+    <div style="grid-column: 2;">
+      <h1 style="font-size:80px;">{% if title|length > 0 %}{{ title }}{% else %}{{ API_TITLE }}{% endif %}</h1>
     </div>
   </header>
   <nav>
-    <a href="{{ url_for('landing_page') }}">Landing Page</a>
-    <a href="{{ url_for('collections') }}">Collections</a>
-    <a href="{{ url_for('conformance') }}">Conformance</a>
+    <a href="/">Landing Page</a>
+    <a href="{{ url_for('collections_route') }}">Collections</a>
+    <a href="/api/swagger.json">API Description</a>
+    <a href="/doc/">API Docs</a>
+    <a href="{{ url_for('conformance_route') }}">Conformance</a>
   </nav>
   <div id="contents">
     {% block content %}{% endblock %}

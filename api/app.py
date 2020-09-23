@@ -1,20 +1,38 @@
 import logging
-import markdown
 from flask import (
     Flask,
     request,
     render_template,
-    Markup,
-    g,
-    redirect,
     url_for,
     jsonify,
+    Blueprint,
+    Response
 )
+from flask_restx import Namespace, reqparse, Api, Resource
 from config import *
-from pyldapi import Renderer, ContainerRenderer
+from pyldapi import Renderer
 from model import *
 
 app = Flask(__name__, template_folder=TEMPLATES_DIR, static_folder=STATIC_DIR)
+
+blueprint = Blueprint('api', __name__)
+
+
+@app.route("/")
+def landing_page():
+    # make dummy Landing Page data
+    title = "Geofabric OGC API"
+    description = "An OGC API and Linked Data API delivering information from the Australian Hydrological Geospatial " \
+                  "Fabric (Geofabric) dataset"
+
+    return LandingPageRenderer(request, title=title, description=description).render()
+
+
+api = Api(app, doc="/doc", version='1.0', title="OGC LD API",
+          description="Open API Documentation for this {}".format(API_TITLE))
+# sapi = Namespace('oai', description="Search from DGGS Engine", version="1.0")
+# api.add_namespace(sapi)
+app.register_blueprint(blueprint)
 
 
 @app.context_processor
@@ -37,100 +55,78 @@ def context_processor():
     return dict(
         LOCAL_URIS=LOCAL_URIS,
         MEDIATYPE_NAMES=MEDIATYPE_NAMES,
+        API_TITLE=API_TITLE,
     )
 
 
-@app.route("/")
-def landing_page():
-    # make dummy Landing Page data
-    title = "Geofabric OGC API"
-    description = "An OGC API and Linked Data API delivering information from the Australian Hydrological Geospatial " \
-                  "Fabric (Geofabric) dataset"
-
-    return LandingPageRenderer(request, title=title, description=description).render()
+@api.route("/spec")
+class Spec(Resource):
+    def get(self):
+        return api.__schema__
 
 
-@app.route("/api")
-def api_def():
-    return "API def dummy"
+@api.route("/conformance")
+# @api.param()
+class ConformanceRoute(Resource):
+    def get(self):
+        # make dummy Conformance Page data
+        conformance_classes = [
+            "http://www.opengis.net/spec/ogcapi-features-1/1.0/conf/core",
+            "http://www.opengis.net/spec/ogcapi-features-1/1.0/conf/oas30",
+            "http://www.opengis.net/spec/ogcapi-features-1/1.0/conf/html",
+            "http://www.opengis.net/spec/ogcapi-features-1/1.0/conf/geojson"
+        ]
+        return ConformanceRenderer(request, conformance_classes).render()
 
 
-@app.route("/api.html")
-def api_doc():
-    return "API doc dummy"
+@api.route("/collections")
+class CollectionsRoute(Resource):
+    def get(self):
+        # make dummy Collections List data
+        collections = [
+            Collection("catch", title="Catchments", description="Hydrological Catchments"),
+            Collection("riv", title="River Regions", description="A collection of Hydrological Catchments for a named river")
+        ]
+        return CollectionsRenderer(request, collections).render()
 
 
-@app.route("/conformance")
-def conformance():
-    # make dummy Conformance Page data
-    conformance_classes = [
-        "http://www.opengis.net/spec/ogcapi-features-1/1.0/conf/core",
-        "http://www.opengis.net/spec/ogcapi-features-1/1.0/conf/oas30",
-        "http://www.opengis.net/spec/ogcapi-features-1/1.0/conf/html",
-        "http://www.opengis.net/spec/ogcapi-features-1/1.0/conf/geojson"
-    ]
-    return ConformanceRenderer(request, conformance_classes).render()
-
-
-@app.route("/collections")
-def collections():
-    # make dummy Collections List data
-    collections = [
-        Collection("catch", title="Catchments", description="Hydrological Catchments"),
-        Collection("riv", title="River Regions", description="A collection of Hydrological Catchments for a named river")
-    ]
-    return CollectionsRenderer(request, collections).render()
-
-
-@app.route("/collections/<string:collection_id>")
-def collection(collection_id):
-    if int(collection_id[-1]) not in range(10):
-        return render_api_error(
-            "Invalid Collection ID",
-            400,
-            "The Collection ID must be one of 'level{}'".format("', 'level".join([str(x) for x in range(10)]))
+@api.route("/collections/<string:collection_id>")
+@api.param("collection_id", "The ID of a Collection delivered by this API. See /collections for the list.")
+class CollectionRoute(Resource):
+    def get(self, collection_id):
+        return render_template(
+            "collection.html",
+            collection_id=collection_id,
+            collection_name="Grid " + str(collection_id)
         )
-    return render_template(
-        "collection.html",
-        collection_id=collection_id,
-        collection_name="Grid " + str(collection_id)
-    )
 
 
-@app.route("/collections/<string:collection_id>/items")
-def items(collection_id):
-    features = []
-    for cell in TB16Pix.grid(int(collection_id[-1])):
-        if LOCAL_URIS:
-            features.append((
-                url_for("item", collection_id=collection_id, item_id=str(cell)),
-                "Cell {}".format(str(cell))
-            ))
-        else:
-            features.append((
-                URI_BASE_CELL[str(cell)],
-                "Cell {}".format(str(cell))
-            ))
+@api.route("/collections/<string:collection_id>/items")
+@api.param("collection_id", "The ID of a Collection delivered by this API. See /collections for the list.")
+class ItemsRoute(Resource):
+    def get(self, collection_id):
+        features = []
 
-    return render_template(
-        "items.html",
-        collection_name="Grid " + str(collection_id),
-        items=features
-    )
+        return render_template(
+            "items.html",
+            collection_name="Grid " + str(collection_id),
+            items=features,
+            headers={"ContentType": "text/html"}
+        )
 
 
-@app.route("/collections/<string:collection_id>/items/<string:item_id>")
-def item(collection_id, item_id):
-    item_id = item_id.split("?")[0]
-    if item_id == "Earth":
-        return EarthRenderer(request, item_id).render()
-    else:
-        return CellRenderer(request, item_id).render()
+@api.route("/collections/<string:collection_id>/items/<string:item_id>")
+@api.param("collection_id", "The ID of a Collection delivered by this API. See /collections for the list.")
+@api.param("item_id", "The ID of a Feature in this Collection's list of Items")
+class ItemRoute(Resource):
+    def get(self, collection_id, item_id):
+        return "nothing"
 
 
-@app.route("/object")
-def object():
-    return None
+@api.route("/object")
+class ObjectRoute(Resource):
+    def get(self):
+        return "nothing"
 
 
 def render_api_error(title, status, message, mediatype="text/html"):

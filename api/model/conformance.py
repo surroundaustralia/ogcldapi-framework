@@ -40,7 +40,6 @@ class ConformanceRenderer(Renderer):
     def _render_oai_html(self):
         _template_context = {
             "uri": LANDING_PAGE_URL + "/conformance",
-            "title": "Conformance declaration"
         }
 
         return Response(

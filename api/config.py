@@ -11,3 +11,5 @@ CACHE_FILE = os.environ.get("CACHE_DIR", os.path.join(APP_DIR, "cache", "DATA.pi
 LOCAL_URIS = os.environ.get("LOCAL_URIS", True)
 
 LANDING_PAGE_URL = "http://localhost:5000"
+API_TITLE = "Geofabric OGC LD API"
+VERSION = "1.1"

@@ -27,14 +27,14 @@ class LandingPage:
                 title="This document"
             ),
             Link(
-                LANDING_PAGE_URL + "/api",
+                LANDING_PAGE_URL + "/spec",
                 rel=RelType.SERVICE_DESC,
                 type=MediaType.OPEN_API_3,
                 hreflang=HrefLang.EN,
                 title="API definition"
             ),
             Link(
-                LANDING_PAGE_URL + "/api.html",
+                LANDING_PAGE_URL + "/doc",
                 rel=RelType.SERVICE_DOC,
                 type=MediaType.HTML,
                 hreflang=HrefLang.EN,
