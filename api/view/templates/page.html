@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <link rel="shortcut icon" href="{{ url_for('static', filename="favicon.ico") }}">
-  <title>{% if title|length > 0 %}{{ title }}{% else %}{{ API_TITLE }}{% endif %}</title>
+  <title>{% if api_title|length > 0 %}{{ api_title }}{% else %}{{ API_TITLE }}{% endif %}</title>
   <style>
     html, body {
       margin: 0 auto;
@@ -16,6 +16,7 @@
 
       font-family: 'Cairo', serif;
     }
+
     header {
       grid-row: 1;
       grid-column: 1/4;
@@ -57,6 +58,7 @@
 
     #altprofiles {
       grid-column: 2;
+      margin-left: 20px;
     }
 
     footer {
@@ -104,7 +106,7 @@
 <body>
   <header>
     <div style="grid-column: 2;">
-      <h1 style="font-size:80px;">{% if title|length > 0 %}{{ title }}{% else %}{{ API_TITLE }}{% endif %}</h1>
+      <h1 style="font-size:80px;">{% if api_title|length > 0 %}{{ api_title }}{% else %}{{ API_TITLE }}{% endif %}</h1>
     </div>
   </header>
   <nav>

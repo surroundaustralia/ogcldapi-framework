@@ -1,12 +1,15 @@
 {% extends "page.html" %}
 {% block content %}
   <div>
-    <h1>Collection: {{ collection_name }}</h1>
+    <h1>{{ collection.title }}</h1>
   </div>
   <div id="maincontent">
-    <h2>Items</h2>
+    {% if collection.description is not none %}
+      <h4>{{ collection.description }}</h4>
+    {% endif %}
+    <p>Items in this Collection:</p>
     <ul>
-      <li><a href="{{ url_for("items_route", collection_id=collection_id) }}">Cells</a></li>
+      <li><a href="{{ request.url }}/items">Items</a></li>
     </ul>
   </div>
   {% include 'page_altprofiles.html' %}

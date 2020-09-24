@@ -1,4 +1,7 @@
 import os
+from rdflib import Graph, Namespace, BNode
+from rdflib.plugins.stores.sparqlstore import SPARQLStore
+
 
 APP_DIR = os.environ.get("APP_DIR", os.path.dirname(os.path.realpath(__file__)))
 TEMPLATES_DIR = os.environ.get("TEMPLATES_DIR", os.path.join(APP_DIR, "view", "templates"))
@@ -10,6 +13,14 @@ CACHE_HOURS = os.environ.get("CACHE_HOURS", 1)
 CACHE_FILE = os.environ.get("CACHE_DIR", os.path.join(APP_DIR, "cache", "DATA.pickle"))
 LOCAL_URIS = os.environ.get("LOCAL_URIS", True)
 
+OGCAPI = Namespace("https://data.surroundaustralia.com/def/ogcapi/")
 LANDING_PAGE_URL = "http://localhost:5000"
-API_TITLE = "Geofabric OGC LD API"
+API_TITLE = "OGC LD API"
 VERSION = "1.1"
+
+
+def get_graph():
+    graph = Graph("SPARQLStore", identifier="http://www.openrdf.org/schema/sesame#nil")
+    graph.open("http://localhost:7200/repositories/asgs2016_dggs")
+
+    return graph

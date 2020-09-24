@@ -5,23 +5,23 @@ from .link import *
 import json
 from flask import Response, render_template
 from .spatial_object import SpatialExtent, TemporalExtent
-from .feature import Feature
 
 
-class Collection(object):
+class Feature(object):
     def __init__(
             self,
             id: str,
+            isPartOf: str,
             title: str = None,
             description: str = None,
             extent_spatial: SpatialExtent = None,
             extent_temporal: TemporalExtent = None,
             other_links: List[Link] = None,
-            features: List[Feature] = None,
-            feature_count: int = None
+            geometries: List[tuple] = None
     ):
         self.id = id
-        self.uri = LANDING_PAGE_URL + "/collections/" + id
+        self.isPartOf = isPartOf
+        self.uri = LANDING_PAGE_URL + "/collections/" + self.isPartOf + "/item/" + id
         self.title = title
         self.description = description
         self.extent_spatial = extent_spatial
@@ -34,43 +34,23 @@ class Collection(object):
         ]
         if other_links is not None:
             self.links.extend(other_links)
-        self.features = features
-        if feature_count is not None:
-            self.feature_count = feature_count
-        elif self.features is not None:
-            self.feature_count = len(self.features)
-        else:
-            self.feature_count = None
+        self.geometries = geometries
 
     def to_dict(self):
         self.links = [x.__dict__ for x in self.links]
-        self.features = [x.to_dict() for x in self.features]
         return self.__dict__
 
 
-class CollectionRenderer(Renderer):
-    def __init__(self, request, collection: Collection, other_links: List[Link] = None):
-        self.collection = collection
-        self.links = [
-            Link(
-                LANDING_PAGE_URL + "/collections.json",
-                rel=RelType.SELF.value,
-                type=MediaType.JSON.value,
-                title="This Document"
-            ),
-            Link(
-                LANDING_PAGE_URL + "/collections.html",
-                rel=RelType.SELF.value,
-                type=MediaType.HTML.value,
-                title="This Document in HTML"
-            ),
-        ]
+class FeatureRenderer(Renderer):
+    def __init__(self, request, feature: Feature, other_links: List[Link] = None):
+        self.feature = feature
+        self.links = []
         if other_links is not None:
             self.links.extend(other_links)
 
         super().__init__(
             request,
-            LANDING_PAGE_URL + "/collection/" + self.collection.id,
+            LANDING_PAGE_URL + "/collections/" + self.feature.isPartOf + "/item/" + self.feature.id,
             profiles={"oai": profile_openapi},
             default_profile_token="oai"
         )
@@ -95,7 +75,7 @@ class CollectionRenderer(Renderer):
     def _render_oai_json(self):
         page_json = {
             "links": [x.__dict__ for x in self.links],
-            "collection": self.collection.to_dict()
+            "feature": self.feature.to_dict()
         }
 
         return Response(
@@ -107,10 +87,10 @@ class CollectionRenderer(Renderer):
     def _render_oai_html(self):
         _template_context = {
             "links": self.links,
-            "collection": self.collection
+            "feature": self.feature
         }
 
         return Response(
-            render_template("collection.html", **_template_context),
+            render_template("feature.html", **_template_context),
             headers=self.headers,
         )

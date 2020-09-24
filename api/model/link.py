@@ -2,7 +2,7 @@ from enum import Enum
 
 
 class RelType(Enum):
-    SELF = "selfv"
+    SELF = "self"
     SERVICE_DESC = "service-desc"
     SERVICE_DOC = "service-doc"
     CONFORMANCE = "conformance"

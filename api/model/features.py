@@ -1,54 +1,14 @@
+from pyldapi import Renderer, ContainerRenderer
 from typing import List
 from .profiles import *
 from config import *
 from .link import *
+from .collection import Collection
 import json
 from flask import Response, render_template
-from .spatial_object import SpatialExtent, TemporalExtent
-from .feature import Feature
 
 
-class Collection(object):
-    def __init__(
-            self,
-            id: str,
-            title: str = None,
-            description: str = None,
-            extent_spatial: SpatialExtent = None,
-            extent_temporal: TemporalExtent = None,
-            other_links: List[Link] = None,
-            features: List[Feature] = None,
-            feature_count: int = None
-    ):
-        self.id = id
-        self.uri = LANDING_PAGE_URL + "/collections/" + id
-        self.title = title
-        self.description = description
-        self.extent_spatial = extent_spatial
-        self.extent_temporal = extent_temporal
-        self.links = [
-            Link(LANDING_PAGE_URL + "/collections/" + id + "/items",
-                 rel=RelType.ITEMS.value,
-                 type=MediaType.GEOJSON.value,
-                 title=self.title)
-        ]
-        if other_links is not None:
-            self.links.extend(other_links)
-        self.features = features
-        if feature_count is not None:
-            self.feature_count = feature_count
-        elif self.features is not None:
-            self.feature_count = len(self.features)
-        else:
-            self.feature_count = None
-
-    def to_dict(self):
-        self.links = [x.__dict__ for x in self.links]
-        self.features = [x.to_dict() for x in self.features]
-        return self.__dict__
-
-
-class CollectionRenderer(Renderer):
+class FeaturesRenderer(ContainerRenderer):
     def __init__(self, request, collection: Collection, other_links: List[Link] = None):
         self.collection = collection
         self.links = [
@@ -70,12 +30,18 @@ class CollectionRenderer(Renderer):
 
         super().__init__(
             request,
-            LANDING_PAGE_URL + "/collection/" + self.collection.id,
+            LANDING_PAGE_URL + "/collections/" + self.collection.id + "/items",
+            "Features",
+            "The Features of Collection {}".format(self.collection.id),
+            None,
+            None,
+            [(LANDING_PAGE_URL + "/collections/" + self.collection.id + "/items/" + x.id, x.title) for x in self.collection.features],
+            self.collection.feature_count,
             profiles={"oai": profile_openapi},
             default_profile_token="oai"
         )
 
-        self.ALLOWED_PARAMS = ["_profile", "_view", "_mediatype"]
+        self.ALLOWED_PARAMS = ["_profile", "_view", "_mediatype", "_format", "page", "per_page"]
 
     def render(self):
         for v in self.request.values.items():
@@ -95,7 +61,7 @@ class CollectionRenderer(Renderer):
     def _render_oai_json(self):
         page_json = {
             "links": [x.__dict__ for x in self.links],
-            "collection": self.collection.to_dict()
+            "collection": self.collection.to_dict(),
         }
 
         return Response(
@@ -107,10 +73,10 @@ class CollectionRenderer(Renderer):
     def _render_oai_html(self):
         _template_context = {
             "links": self.links,
-            "collection": self.collection
+            "collection": self.collection,
         }
 
         return Response(
-            render_template("collection.html", **_template_context),
+            render_template("features.html", **_template_context),
             headers=self.headers,
         )
