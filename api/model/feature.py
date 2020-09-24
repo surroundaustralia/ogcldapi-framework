@@ -31,6 +31,40 @@ class Geometry(object):
         self.label = label
         self.crs = crs
 
+    def to_dict(self):
+        return {
+            "coordinates": self.coordinates,
+            "role": self.role.value,
+            "label": self.label,
+            "crs": self.crs.value,
+        }
+
+    def to_geo_json_dict(self):
+        """
+        {
+          "type": "Feature",
+          "geometry": {
+            "type": "LineString",
+            "coordinates": [
+              [102.0, 0.0], [103.0, 1.0], [104.0, 0.0], [105.0, 1.0]
+            ]
+          },
+        """
+        # this only works for WGS84 coordinates
+        if self.crs == CRS.WGS84:
+            # TODO: extend this to handle things other than Polygons
+            coordinates = []
+            for coordinate in self.coordinates.lstrip("MULTIPOLYGON (((").rstrip(")))").split(","):
+                coordinates.append([coordinate.strip().split(" ")])
+            return {
+                "type": "Polygon",
+                "coordinates": [
+                    coordinates
+                ]
+            }
+        else:
+            return TypeError("Only WGS84 geometries can be serialised in GeoJSON")
+
 
 class Feature(object):
     def __init__(
@@ -66,8 +100,35 @@ class Feature(object):
     def to_dict(self):
         self.links = [x.__dict__ for x in self.links]
         if self.geometries is not None:
-            self.geometries = [x.__dict__ for x in self.geometries]
+            self.geometries = [x.to_dict() for x in self.geometries]
         return self.__dict__
+
+    def to_geo_json_dict(self):
+        # this only serialises the Feature properties and WGS84 Geometries
+        """
+        {
+          "type": "Feature",
+          "geometry": {
+            "type": "LineString",
+            "coordinates": [
+              [102.0, 0.0], [103.0, 1.0], [104.0, 0.0], [105.0, 1.0]
+            ]
+          },
+        """
+        geojson_geometry = [g.to_geo_json_dict() for g in self.geometries if g.crs == CRS.WGS84][0]  # one only
+
+        properties = {
+            "title": self.title,
+            "isPartOf": self.isPartOf
+        }
+        if self.description is not None:
+            properties["description"] = self.description
+
+        return {
+            "type": "Feature",
+            "geometry": geojson_geometry,
+            "properties": properties
+        }
 
 
 class FeatureRenderer(Renderer):
@@ -106,12 +167,12 @@ class FeatureRenderer(Renderer):
     def _render_oai_json(self):
         page_json = {
             "links": [x.__dict__ for x in self.links],
-            "feature": self.feature.to_dict()
+            "feature": self.feature.to_geo_json_dict()
         }
 
         return Response(
             json.dumps(page_json),
-            mimetype=str(MediaType.JSON.value),
+            mimetype=str(MediaType.GEOJSON.value),
             headers=self.headers,
         )
 
@@ -175,5 +236,11 @@ class FeatureRenderer(Renderer):
         # serialise in the appropriate RDF format
         if self.mediatype in ["application/rdf+json", "application/json"]:
             return Response(g.serialize(format="json-ld"), mimetype=self.mediatype)
-        else:
+        elif self.mediatype in Renderer.RDF_MEDIA_TYPES:
             return Response(g.serialize(format=self.mediatype), mimetype=self.mediatype)
+        else:
+            return Response(
+                "The Media Type you requested cannot be serialized to",
+                status=400,
+                mimetype="text/plain"
+            )
