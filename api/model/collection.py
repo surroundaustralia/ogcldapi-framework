@@ -44,7 +44,9 @@ class Collection(object):
 
     def to_dict(self):
         self.links = [x.__dict__ for x in self.links]
-        self.features = [x.to_dict() for x in self.features]
+        if self.features is not None:
+            self.features = [x.to_dict() for x in self.features]
+
         return self.__dict__
 
 

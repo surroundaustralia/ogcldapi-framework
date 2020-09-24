@@ -4,5 +4,4 @@ from .conformance import ConformanceRenderer
 from .collections import CollectionsRenderer
 from .collection import Collection, CollectionRenderer
 from .features import FeaturesRenderer
-from .feature import Feature, FeatureRenderer
-
+from .feature import Feature, FeatureRenderer, Geometry, GeometryRole, CRS

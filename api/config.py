@@ -1,5 +1,6 @@
 import os
 from rdflib import Graph, Namespace, BNode
+from rdflib.namespace import RDF, RDFS
 from rdflib.plugins.stores.sparqlstore import SPARQLStore
 
 
@@ -13,6 +14,8 @@ CACHE_HOURS = os.environ.get("CACHE_HOURS", 1)
 CACHE_FILE = os.environ.get("CACHE_DIR", os.path.join(APP_DIR, "cache", "DATA.pickle"))
 LOCAL_URIS = os.environ.get("LOCAL_URIS", True)
 
+GEO = Namespace("http://www.opengis.net/ont/geosparql#")
+GEOX = Namespace("https://linked.data.gov.au/def/geox#")
 OGCAPI = Namespace("https://data.surroundaustralia.com/def/ogcapi/")
 LANDING_PAGE_URL = "http://localhost:5000"
 API_TITLE = "OGC LD API"

@@ -30,7 +30,7 @@ profile_geosparql = Profile(
     "http://www.opengis.net/ont/geosparql",
     label="GeoSPARQL",
     comment="An RDF/OWL vocabulary for representing spatial information",
-    mediatypes=["text/html", "application/json"] + Renderer.RDF_MEDIA_TYPES,
+    mediatypes=Renderer.RDF_MEDIA_TYPES,
     default_mediatype="text/html",
     languages=["en"],  # default 'en' only for now
     default_language="en",

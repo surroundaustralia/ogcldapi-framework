@@ -247,7 +247,7 @@ class FeaturesRoute(Resource):
                     f["title"] = str(o)
                 elif p == DCTERMS.description:
                     f["description"] = str(o)
-            features.append(Feature(f["id"], str(collection_uri), title=f["title"], description=f["description"]))
+            features.append(Feature(str(s), f["id"], str(collection_uri), title=f["title"], description=f["description"]))
 
         collection.features = features
 
@@ -273,25 +273,9 @@ class FeatureRoute(Resource):
             }}
             """.format(collection_id)
 
-        feature = Feature(item_id, collection_id)
-        q = """
-            # Get Collection
-            PREFIX ogcapi: <https://data.surroundaustralia.com/def/ogcapi/>
-            PREFIX dcterms: <http://purl.org/dc/terms/>
-
-            SELECT ?uri ?title ?description
-            WHERE {{
-                ?uri a ogcapi:Collection ;
-                     dcterms:identifier "{}" ;
-                     dcterms:title ?title ;
-                     dcterms:description ?description .
-            }}
-            """.format(collection_id)
-
         graph = get_graph()
-        GEO = Namespace("http://www.opengis.net/ont/geosparql#")
-        GEOX = Namespace("https://linked.data.gov.au/def/geox#")
         for s in graph.subjects(predicate=DCTERMS.identifier, object=Literal(item_id)):
+            feature = Feature(str(s), item_id, collection_id)
             for p, o in graph.predicate_objects(subject=s):
                 if p == DCTERMS.title:
                     feature.title = str(o)
@@ -313,8 +297,8 @@ class FeatureRoute(Resource):
             sparql.setReturnFormat(JSON)
             ret = sparql.queryAndConvert()["results"]["bindings"]
             feature.geometries = [
-                ("Cartesian Geometry", ret[0]["g1"]["value"]),
-                ("TB16Pix DGGS Geometry", ret[0]["g2"]["value"]),
+                Geometry(ret[0]["g1"]["value"], GeometryRole.Boundary, "Cartesian Geometry", CRS.WGS84),
+                Geometry(ret[0]["g2"]["value"], GeometryRole.Boundary, "TB16Pix DGGS Geometry", CRS.TB16PIX),
             ]
 
             return FeatureRenderer(request, feature).render()

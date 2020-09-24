@@ -4,7 +4,7 @@
     <h1>Alternate Profiles</h1>
     <dl>
       <dt>Instance</dt>
-      <dd><a href="{% if LOCAL_URIS %}{{ url_for("object") }}?uri={% endif %}{{ uri }}">{{ uri }}</a></dd>
+      <dd><a href="{% if LOCAL_URIS %}{{ url_for("object_route") }}?uri={% endif %}{{ uri }}">{{ uri }}</a></dd>
       <dt>Default Profile</dt>
       <dd><a href="{{ request.base_url }}?uri={{ uri }}&_profile={{ default_profile_token }}">{{ default_profile_token }}</a></dd>
     </dl>
