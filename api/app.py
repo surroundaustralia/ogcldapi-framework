@@ -50,7 +50,7 @@ def landing_page():
     return LandingPageRenderer(request, title=title, description=description).render()
 
 
-api = Api(app, doc="/doc", version='1.0', title="OGC LD API",
+api = Api(app, doc="/doc/", version='1.0', title="OGC LD API",
           description="Open API Documentation for this {}".format(API_TITLE))
 # sapi = Namespace('oai', description="Search from DGGS Engine", version="1.0")
 # api.add_namespace(sapi)
@@ -285,12 +285,12 @@ class FeatureRoute(Resource):
             q = """
                 PREFIX geo: <http://www.opengis.net/ont/geosparql#>
                 PREFIX geox: <http://linked.data.gov.au/def/geox#>
-                select * where {
-                    <https://linked.data.gov.au/dataset/asgs2016/statisticalarealevel1/80101100101>
+                select * where {{
+                    <https://linked.data.gov.au/dataset/asgs2016/statisticalarealevel1/{}>
                         geo:hasGeometry/geo:asWKT ?g1 ;
                         geo:hasGeometry/geox:asDGGS ?g2 .
-                }
-                """
+                }}
+                """.format(item_id)
             from SPARQLWrapper import SPARQLWrapper, JSON
             sparql = SPARQLWrapper("http://localhost:7200/repositories/asgs2016_dggs")
             sparql.setQuery(q)
