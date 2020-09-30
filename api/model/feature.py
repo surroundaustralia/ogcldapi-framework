@@ -7,6 +7,8 @@ from flask import Response, render_template
 from .spatial_object import SpatialExtent, TemporalExtent
 from rdflib import URIRef, Literal
 from enum import Enum
+from geomet import wkt
+from geojson_rewind import rewind
 
 
 class GeometryRole(Enum):
@@ -40,28 +42,9 @@ class Geometry(object):
         }
 
     def to_geo_json_dict(self):
-        """
-        {
-          "type": "Feature",
-          "geometry": {
-            "type": "LineString",
-            "coordinates": [
-              [102.0, 0.0], [103.0, 1.0], [104.0, 0.0], [105.0, 1.0]
-            ]
-          },
-        """
-        # this only works for WGS84 coordinates
+        # this only works for WGS84 coordinates, no differentiation on role for now
         if self.crs == CRS.WGS84:
-            # TODO: extend this to handle things other than Polygons
-            coordinates = []
-            for coordinate in self.coordinates.lstrip("MULTIPOLYGON (((").rstrip(")))").split(","):
-                coordinates.append([coordinate.strip().split(" ")])
-            return {
-                "type": "Polygon",
-                "coordinates": [
-                    coordinates
-                ]
-            }
+            return wkt.loads(self.coordinates)
         else:
             return TypeError("Only WGS84 geometries can be serialised in GeoJSON")
 
@@ -125,8 +108,9 @@ class Feature(object):
             properties["description"] = self.description
 
         return {
+            "id": self.uri,
             "type": "Feature",
-            "geometry": geojson_geometry,
+            "geometry": rewind(geojson_geometry),
             "properties": properties
         }
 
@@ -157,8 +141,10 @@ class FeatureRenderer(Renderer):
         if response is not None:
             return response
         elif self.profile == "oai":
-            if self.mediatype == "application/json":
+            if self.mediatype == MediaType.JSON.value:
                 return self._render_oai_json()
+            elif self.mediatype == MediaType.GEOJSON.value:
+                return self._render_oai_geojson()
             else:
                 return self._render_oai_html()
         elif self.profile == "geosp":
@@ -169,6 +155,17 @@ class FeatureRenderer(Renderer):
             "links": [x.__dict__ for x in self.links],
             "feature": self.feature.to_geo_json_dict()
         }
+
+        return Response(
+            json.dumps(page_json),
+            mimetype=str(MediaType.JSON.value),
+            headers=self.headers,
+        )
+
+    def _render_oai_geojson(self):
+        page_json = self.feature.to_geo_json_dict()
+        if len(self.links) > 0:
+            page_json["links"] = [x.__dict__ for x in self.links]
 
         return Response(
             json.dumps(page_json),

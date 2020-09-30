@@ -67,6 +67,7 @@ def context_processor():
     MEDIATYPE_NAMES = {
         "text/html": "HTML",
         "application/json": "JSON",
+        "application/geo+json": "GeoJSON",
         "text/turtle": "Turtle",
         "application/rdf+xml": "RDX/XML",
         "application/ld+json": "JSON-LD",

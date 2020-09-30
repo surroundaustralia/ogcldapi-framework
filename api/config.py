@@ -7,7 +7,7 @@ from rdflib.plugins.stores.sparqlstore import SPARQLStore
 APP_DIR = os.environ.get("APP_DIR", os.path.dirname(os.path.realpath(__file__)))
 TEMPLATES_DIR = os.environ.get("TEMPLATES_DIR", os.path.join(APP_DIR, "view", "templates"))
 STATIC_DIR = os.environ.get("STATIC_DIR", os.path.join(APP_DIR, "view", "style"))
-LOGFILE = os.environ.get("LOGFILE", os.path.join(APP_DIR, "catprez.log"))
+LOGFILE = os.environ.get("LOGFILE", os.path.join(APP_DIR, "ogcapild.log"))
 DEBUG = os.environ.get("DEBUG", True)
 PORT = os.environ.get("PORT", 5000)
 CACHE_HOURS = os.environ.get("CACHE_HOURS", 1)
