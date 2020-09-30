@@ -116,7 +116,6 @@ class CollectionsRoute(Resource):
     def get(self):
         collections = []
         q = """
-            # List Collections
             PREFIX ogcapi: <https://data.surroundaustralia.com/def/ogcapi/>
             PREFIX dcterms: <http://purl.org/dc/terms/>
             
@@ -129,13 +128,13 @@ class CollectionsRoute(Resource):
                      dcterms:description ?description .
             }}
             ORDER BY ?identifier 
-            """.format("https://w3id.org/dggs/asgs")
+            """.format(DATASET_URI)
         graph = get_graph()
         candidates = []
         for s in graph.subjects(predicate=RDF.type, object=OGCAPI.Collection):
             candidates.append(s)
         for candidate in candidates:
-            if not (candidate, DCTERMS.isPartOf, URIRef("https://w3id.org/dggs/asgs")) in graph:
+            if not (candidate, DCTERMS.isPartOf, URIRef(DATASET_URI)) in graph:
                 candidates.remove(candidate)
         for candidate in candidates:
             for p, o in graph.predicate_objects(subject=candidate):
@@ -286,20 +285,21 @@ class FeatureRoute(Resource):
             q = """
                 PREFIX geo: <http://www.opengis.net/ont/geosparql#>
                 PREFIX geox: <http://linked.data.gov.au/def/geox#>
-                select * where {{
-                    <https://linked.data.gov.au/dataset/asgs2016/statisticalarealevel1/{}>
+                SELECT * 
+                WHERE {{
+                    <https://linked.data.gov.au/dataset/geofabric/contractedcatchment/{}>
                         geo:hasGeometry/geo:asWKT ?g1 ;
                         geo:hasGeometry/geox:asDGGS ?g2 .
                 }}
                 """.format(item_id)
             from SPARQLWrapper import SPARQLWrapper, JSON
-            sparql = SPARQLWrapper("http://localhost:7200/repositories/asgs2016_dggs")
+            sparql = SPARQLWrapper(SPARQL_ENDPOINT)
             sparql.setQuery(q)
             sparql.setReturnFormat(JSON)
             ret = sparql.queryAndConvert()["results"]["bindings"]
             feature.geometries = [
-                Geometry(ret[0]["g1"]["value"], GeometryRole.Boundary, "Cartesian Geometry", CRS.WGS84),
-                Geometry(ret[0]["g2"]["value"], GeometryRole.Boundary, "TB16Pix DGGS Geometry", CRS.TB16PIX),
+                Geometry(ret[0]["g1"]["value"], GeometryRole.Boundary, "WGS84 Geometry", CRS.WGS84),
+                Geometry(ret[0]["g2"]["value"], GeometryRole.Boundary, "TB16Pix Geometry", CRS.TB16PIX),
             ]
 
             return FeatureRenderer(request, feature).render()

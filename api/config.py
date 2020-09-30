@@ -21,9 +21,13 @@ LANDING_PAGE_URL = "http://localhost:5000"
 API_TITLE = "OGC LD API"
 VERSION = "1.1"
 
+DATASET_URI = "https://w3id.org/dggs/geofabric"
+SPARQL_ENDPOINT = "http://localhost:7200/repositories/geofabric_dggs"
+
 
 def get_graph():
+    # TODO: deal better with default graph
     graph = Graph("SPARQLStore", identifier="http://www.openrdf.org/schema/sesame#nil")
-    graph.open("http://localhost:7200/repositories/asgs2016_dggs")
+    graph.open(SPARQL_ENDPOINT)
 
     return graph
