@@ -9,6 +9,7 @@ from rdflib import URIRef, Literal
 from enum import Enum
 from geomet import wkt
 from geojson_rewind import rewind
+import markdown
 
 
 class GeometryRole(Enum):
@@ -65,9 +66,8 @@ class Feature(object):
         self.uri = uri
         self.id = id
         self.isPartOf = isPartOf
-        self.uri = LANDING_PAGE_URL + "/collections/" + self.isPartOf + "/item/" + id
         self.title = title
-        self.description = description
+        self.description = markdown.markdown(description) if description is not None else None
         self.extent_spatial = extent_spatial
         self.extent_temporal = extent_temporal
         self.links = [

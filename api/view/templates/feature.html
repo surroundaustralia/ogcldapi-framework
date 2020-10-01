@@ -5,7 +5,7 @@
   </div>
   <div id="maincontent">
     {% if feature.description is not none %}
-      <h4>{{ feature.description }}</h4>
+      <div>{{ feature.description|safe }}</div>
     {% endif %}
     {% if feature.geometries is not none %}
       <style>

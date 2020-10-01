@@ -60,7 +60,7 @@ class LandingPage:
             self.links.extend(other_links)
 
         self.title = title
-        self.description = description
+        self.description = markdown.markdown(description) if description is not None else None
 
 
 class LandingPageRenderer(Renderer):

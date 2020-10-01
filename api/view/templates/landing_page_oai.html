@@ -9,7 +9,7 @@
   </div>
   <div id="maincontent">
     {% if landing_page.description is not none %}
-    <h4>{{ landing_page.description }}</h4>
+      <div>{{ landing_page.description|safe }}</div>
     {% endif %}
 
     <h2>Links</h2>

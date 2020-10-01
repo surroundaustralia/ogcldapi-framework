@@ -5,7 +5,7 @@
   </div>
   <div id="maincontent">
     {% if collection.description is not none %}
-      <h4>{{ collection.description }}</h4>
+      <div>{{ collection.description|safe }}</div>
     {% endif %}
     <p>Items in this Collection:</p>
     <ul>

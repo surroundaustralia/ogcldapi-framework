@@ -6,6 +6,7 @@ import json
 from flask import Response, render_template
 from .spatial_object import SpatialExtent, TemporalExtent
 from .feature import Feature
+import markdown
 
 
 class Collection(object):
@@ -23,7 +24,7 @@ class Collection(object):
         self.id = id
         self.uri = LANDING_PAGE_URL + "/collections/" + id
         self.title = title
-        self.description = description
+        self.description = markdown.markdown(description) if description is not None else None
         self.extent_spatial = extent_spatial
         self.extent_temporal = extent_temporal
         self.links = [
