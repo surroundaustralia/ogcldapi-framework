@@ -192,9 +192,20 @@ class FeaturesRoute(Resource):
             if request.values.get("per_page") is not None
             else 20
         )
-        # generate list for requested page and per_page
-        start = (page - 1) * per_page
-        end = start + per_page
+        # limit
+        limit = int(request.values.get("limit")) if request.values.get("limit") is not None else None
+
+        # if limit is set, ignore page & per_page
+        if limit is not None:
+            start = 0
+            end = limit
+        else:
+            # generate list for requested page and per_page
+            start = (page - 1) * per_page
+            end = start + per_page
+
+        print("start / end")
+        print("{} / {}".format(start, end))
 
         q = """
             PREFIX ogcapi: <https://data.surroundaustralia.com/def/ogcapi/>

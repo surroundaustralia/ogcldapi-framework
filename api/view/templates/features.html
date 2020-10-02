@@ -10,6 +10,7 @@
       <li><a href="items/{{ feature.id }}">{{ feature.title }}</a></li>
     {% endfor %}
     </ul>
+    {{ pagination.links }}
   </div>
   {% include 'page_altprofiles.html' %}
 {% endblock %}

@@ -6,6 +6,7 @@ from .link import *
 from .collection import Collection
 import json
 from flask import Response, render_template
+from flask_paginate import Pagination
 
 
 class CollectionsRenderer(ContainerRenderer):
@@ -73,6 +74,19 @@ class CollectionsRenderer(ContainerRenderer):
         )
 
     def _render_oai_html(self):
+        page = (
+            int(self.request.values.get("page"))
+            if self.request.values.get("page") is not None
+            else 1
+        )
+        per_page = (
+            int(self.request.values.get("per_page"))
+            if self.request.values.get("per_page") is not None
+            else 20
+        )
+
+        pagination = Pagination(page=page, per_page=per_page, total=len(self.collections))
+
         _template_context = {
             "links": self.links,
             "collections": self.collections
