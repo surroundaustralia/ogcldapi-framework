@@ -42,7 +42,7 @@ class FeaturesRenderer(ContainerRenderer):
             default_profile_token="oai"
         )
 
-        self.ALLOWED_PARAMS = ["_profile", "_view", "_mediatype", "_format", "page", "per_page"]
+        self.ALLOWED_PARAMS = ["_profile", "_view", "_mediatype", "_format", "page", "per_page", "limit"]
 
     def render(self):
         for v in self.request.values.items():
@@ -82,8 +82,9 @@ class FeaturesRenderer(ContainerRenderer):
             if self.request.values.get("per_page") is not None
             else 20
         )
+        limit = int(self.request.values.get("limit")) if self.request.values.get("limit") is not None else None
 
-        pagination = Pagination(page=page, per_page=per_page, total=self.collection.feature_count)
+        pagination = Pagination(page=page, per_page=per_page, total=limit if limit is not None else self.collection.feature_count)
 
         _template_context = {
             "links": self.links,
