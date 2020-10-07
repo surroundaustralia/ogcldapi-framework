@@ -5,6 +5,9 @@
   </div>
   <div id="maincontent">
     <h2>Items</h2>
+    {% if bbox %}
+      <h4>Filtered by {{ bbox[0] }}: <code>{{ bbox[1] }}</code></h4>
+    {% endif %}
     <ul>
     {% for feature in collection.features %}
       <li><a href="items/{{ feature.id }}">{{ feature.title }}</a></li>

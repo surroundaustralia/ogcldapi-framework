@@ -7,10 +7,68 @@ from .collection import Collection
 import json
 from flask import Response, render_template
 from flask_paginate import Pagination
+from rdflib import URIRef
+from rdflib.namespace import DCTERMS, RDF
+
+
+class CollectionsList:
+    def __init__(self, request):
+        page = (
+            int(request.values.get("page")) if request.values.get("page") is not None else 1
+        )
+        per_page = (
+            int(request.values.get("per_page"))
+            if request.values.get("per_page") is not None
+            else 20
+        )
+        # limit
+        limit = int(request.values.get("limit")) if request.values.get("limit") is not None else None
+
+        # if limit is set, ignore page & per_page
+        if limit is not None:
+            start = 0
+            end = limit
+        else:
+            # generate list for requested page and per_page
+            start = (page - 1) * per_page
+            end = start + per_page
+
+        self.collections = []
+        q = """
+            PREFIX ogcapi: <https://data.surroundaustralia.com/def/ogcapi/>
+            PREFIX dcterms: <http://purl.org/dc/terms/>
+
+            SELECT ?uri ?identifier ?title ?description
+            WHERE {{
+                ?uri a ogcapi:Collection ;
+                     dcterms:isPartOf <{}> ;
+                     dcterms:identifier ?identifier ;
+                     dcterms:title ?title ;
+                     dcterms:description ?description .
+            }}
+            ORDER BY ?identifier 
+            """.format(DATASET_URI)
+        graph = get_graph()
+        candidates = []
+        for s in graph.subjects(predicate=RDF.type, object=OGCAPI.Collection):
+            candidates.append(s)
+        for candidate in candidates:
+            if not (candidate, DCTERMS.isPartOf, URIRef(DATASET_URI)) in graph:
+                candidates.remove(candidate)
+        for candidate in candidates:
+            for p, o in graph.predicate_objects(subject=candidate):
+                if p == DCTERMS.identifier:
+                    identifier = str(o)
+                elif p == DCTERMS.title:
+                    title = str(o)
+                elif p == DCTERMS.description:
+                    description = str(o)
+
+            self.collections.append(Collection(identifier, title=title, description=description))
 
 
 class CollectionsRenderer(ContainerRenderer):
-    def __init__(self, request, collections: List[Collection], other_links: List[Link] = None):
+    def __init__(self, request, other_links: List[Link] = None):
         self.id = id
         self.links = [
             Link(
@@ -29,7 +87,7 @@ class CollectionsRenderer(ContainerRenderer):
         if other_links is not None:
             self.links.extend(other_links)
 
-        self.collections = collections
+        self.collections = CollectionsList(request).collections
 
         super().__init__(
             request,
@@ -44,7 +102,7 @@ class CollectionsRenderer(ContainerRenderer):
             default_profile_token="oai"
         )
 
-        self.ALLOWED_PARAMS = ["_profile", "_view", "_mediatype", "_format", "page", "per_page", "limit"]
+        self.ALLOWED_PARAMS = ["_profile", "_view", "_mediatype", "_format", "page", "per_page", "limit", "bbox"]
 
     def render(self):
         for v in self.request.values.items():
@@ -86,7 +144,7 @@ class CollectionsRenderer(ContainerRenderer):
         )
         limit = int(self.request.values.get("limit")) if self.request.values.get("limit") is not None else None
 
-        pagination = Pagination(page=page, per_page=per_page, total=limit if limit is not None else self.collection.feature_count)
+        pagination = Pagination(page=page, per_page=per_page, total=limit if limit is not None else len(self.collections))
 
         _template_context = {
             "links": self.links,

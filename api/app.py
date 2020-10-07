@@ -40,14 +40,22 @@ def landing_page():
         """
     graph = get_graph()
 
-    for s in graph.subjects(predicate=RDF.type, object=DCAT.Dataset):
-        for p, o in graph.predicate_objects(subject=s):
-            if p == DCTERMS.title:
-                title = str(o)
-            elif p == DCTERMS.description:
-                description = str(o)
+    try:
+        for s in graph.subjects(predicate=RDF.type, object=DCAT.Dataset):
+            for p, o in graph.predicate_objects(subject=s):
+                if p == DCTERMS.title:
+                    title = str(o)
+                elif p == DCTERMS.description:
+                    description = str(o)
 
-    return LandingPageRenderer(request, title=title, description=description).render()
+        return LandingPageRenderer(request, title=title, description=description).render()
+    except:
+        return Response(
+            "The API cannot connect to its data source, Check your SPARQL endpoint (you gave {}) "
+            "and the query".format(SPARQL_ENDPOINT),
+            status=500,
+            mimetype="text/plain"
+        )
 
 
 api = Api(app, doc="/doc/", version='1.0', title="OGC LD API",
@@ -114,40 +122,7 @@ class ConformanceRoute(Resource):
 @api.route("/collections")
 class CollectionsRoute(Resource):
     def get(self):
-        collections = []
-        q = """
-            PREFIX ogcapi: <https://data.surroundaustralia.com/def/ogcapi/>
-            PREFIX dcterms: <http://purl.org/dc/terms/>
-            
-            SELECT ?uri ?identifier ?title ?description
-            WHERE {{
-                ?uri a ogcapi:Collection ;
-                     dcterms:isPartOf <{}> ;
-                     dcterms:identifier ?identifier ;
-                     dcterms:title ?title ;
-                     dcterms:description ?description .
-            }}
-            ORDER BY ?identifier 
-            """.format(DATASET_URI)
-        graph = get_graph()
-        candidates = []
-        for s in graph.subjects(predicate=RDF.type, object=OGCAPI.Collection):
-            candidates.append(s)
-        for candidate in candidates:
-            if not (candidate, DCTERMS.isPartOf, URIRef(DATASET_URI)) in graph:
-                candidates.remove(candidate)
-        for candidate in candidates:
-            for p, o in graph.predicate_objects(subject=candidate):
-                if p == DCTERMS.identifier:
-                    identifier = str(o)
-                elif p == DCTERMS.title:
-                    title = str(o)
-                elif p == DCTERMS.description:
-                    description = str(o)
-
-            collections.append(Collection(identifier, title=title, description=description))
-
-        return CollectionsRenderer(request, collections).render()
+        return CollectionsRenderer(request).render()
 
 
 @api.route("/collections/<string:collection_id>")
@@ -184,85 +159,7 @@ class CollectionRoute(Resource):
 @api.param("collection_id", "The ID of a Collection delivered by this API. See /collections for the list.")
 class FeaturesRoute(Resource):
     def get(self, collection_id):
-        page = (
-            int(request.values.get("page")) if request.values.get("page") is not None else 1
-        )
-        per_page = (
-            int(request.values.get("per_page"))
-            if request.values.get("per_page") is not None
-            else 20
-        )
-        # limit
-        limit = int(request.values.get("limit")) if request.values.get("limit") is not None else None
-
-        # if limit is set, ignore page & per_page
-        if limit is not None:
-            start = 0
-            end = limit
-        else:
-            # generate list for requested page and per_page
-            start = (page - 1) * per_page
-            end = start + per_page
-
-        print("start / end")
-        print("{} / {}".format(start, end))
-
-        q = """
-            PREFIX ogcapi: <https://data.surroundaustralia.com/def/ogcapi/>
-            PREFIX dcterms: <http://purl.org/dc/terms/>
-
-            SELECT ?uri ?identifier ?title ?description ?id
-            WHERE {{
-                ?uri a ogcapi:Feature ;
-                      dcterms:isPartOf <{}> ;
-                      dcterms:identifier ?identifier .
-                BIND (STR(?identifier) AS ?id)
-                OPTIONAL {{?uri dcterms:title ?title}}
-                OPTIONAL {{?uri dcterms:description ?description}}
-            }}
-            ORDER BY ?identifier
-            """.format(collection_id)
-        graph = get_graph()
-
-        # get Collection info
-        collection = Collection(collection_id)
-        for s in graph.subjects(predicate=DCTERMS.identifier, object=Literal(collection_id)):
-            collection_uri = s
-            for p, o in graph.predicate_objects(subject=s):
-                if p == DCTERMS.title:
-                    collection.title = str(o)
-                elif p == DCTERMS.description:
-                    collection.description = str(o)
-
-        # get list of Features within this Collection
-        features_uris = []
-        for s in graph.subjects(predicate=DCTERMS.isPartOf, object=collection_uri):
-            features_uris.append(s)
-
-        collection.feature_count = len(features_uris)
-        # truncate the list of Features to this page
-        page = features_uris[start:end]
-
-        # Features - only this page's
-        features = []
-        for s in page:
-            f = {
-                "id": None,
-                "title": None,
-                "description": None,
-            }
-            for p, o in graph.predicate_objects(subject=s):
-                if p == DCTERMS.identifier:
-                    f["id"] = str(o)
-                elif p == DCTERMS.title:
-                    f["title"] = str(o)
-                elif p == DCTERMS.description:
-                    f["description"] = str(o)
-            features.append(Feature(str(s), f["id"], str(collection_uri), title=f["title"], description=f["description"]))
-
-        collection.features = features
-
-        return FeaturesRenderer(request, collection).render()
+        return FeaturesRenderer(request, collection_id).render()
 
 
 @api.route("/collections/<string:collection_id>/items/<string:item_id>")
@@ -298,11 +195,11 @@ class FeatureRoute(Resource):
                 PREFIX geox: <http://linked.data.gov.au/def/geox#>
                 SELECT * 
                 WHERE {{
-                    <https://linked.data.gov.au/dataset/geofabric/contractedcatchment/{}>
+                    <{}>
                         geo:hasGeometry/geo:asWKT ?g1 ;
                         geo:hasGeometry/geox:asDGGS ?g2 .
                 }}
-                """.format(item_id)
+                """.format(feature.uri)
             from SPARQLWrapper import SPARQLWrapper, JSON
             sparql = SPARQLWrapper(SPARQL_ENDPOINT)
             sparql.setQuery(q)
