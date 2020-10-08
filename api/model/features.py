@@ -69,7 +69,7 @@ class FeaturesList:
                 elif p == DCTERMS.description:
                     description = str(o)
             self.features.append(
-                (identifier, title, description)
+                (str(s), identifier, title, description)
             )
 
         self.bbox_type = None
@@ -239,7 +239,7 @@ class FeaturesRenderer(ContainerRenderer):
                 "The Features of Collection {}".format(self.feature_list.collection.identifier),
                 None,
                 None,
-                [(LANDING_PAGE_URL + "/collections/" + self.feature_list.collection.identifier + "/items/" + x[0], x[1]) for x in self.feature_list.features],
+                [(LANDING_PAGE_URL + "/collections/" + self.feature_list.collection.identifier + "/items/" + x[1], x[2]) for x in self.feature_list.features],
                 self.feature_list.collection.feature_count,
                 profiles={"oai": profile_openapi, "geosp": profile_geosparql},
                 default_profile_token="oai"
@@ -327,7 +327,7 @@ class FeaturesRenderer(ContainerRenderer):
         )
 
     def _render_oai_html(self):
-        pagination = Pagination(page=self.page, per_page=self.per_page, total=self.feature_list.collection.feature_count)
+        pagination = Pagination(page=self.page, per_page=self.per_page, total=self.feature_list.feature_count)
 
         _template_context = {
             "links": self.links,
@@ -349,8 +349,8 @@ class FeaturesRenderer(ContainerRenderer):
 
         g = g + self.feature_list.collection.to_geosp_graph()
 
-        for f in self.feature_list.collection.features:
-            g = g + f.to_geosp_graph()
+        for f in self.feature_list.features:
+            g = g + Feature(f[0]).to_geosp_graph()
 
         # serialise in the appropriate RDF format
         if self.mediatype in ["application/rdf+json", "application/json"]:

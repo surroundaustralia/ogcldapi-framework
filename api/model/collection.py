@@ -73,7 +73,7 @@ class Collection(object):
 
         g.add((
             c,
-            DCTERMS.identifier(),
+            DCTERMS.identifier,
             Literal(self.identifier)
         ))
 

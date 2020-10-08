@@ -24,7 +24,7 @@ class LandingPage:
                 if p == DCTERMS.title:
                     self.title = str(o)
                 elif p == DCTERMS.description:
-                    self.description = str(o)
+                    self.description = markdown.markdown(o)
 
         # make links
         self.links = [
