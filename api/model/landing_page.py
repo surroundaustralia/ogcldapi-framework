@@ -2,6 +2,7 @@ from typing import List
 from .link import *
 from flask import Response, render_template
 from rdflib import Graph, URIRef, Literal, RDF, RDFS, BNode
+from rdflib.namespace import DCAT, DCTERMS
 from .profiles import *
 from config import *
 import json
@@ -12,10 +13,18 @@ class LandingPage:
     def __init__(
             self,
             other_links: List[Link] = None,
-            title: str = None,
-            description: str = None,
     ):
         self.uri = LANDING_PAGE_URL
+
+        # make dummy Landing Page data
+        g = get_graph()
+        self.description = None
+        for s in g.subjects(predicate=RDF.type, object=DCAT.Dataset):
+            for p, o in g.predicate_objects(subject=s):
+                if p == DCTERMS.title:
+                    self.title = str(o)
+                elif p == DCTERMS.description:
+                    self.description = str(o)
 
         # make links
         self.links = [
@@ -34,7 +43,7 @@ class LandingPage:
                 title="API definition"
             ),
             Link(
-                LANDING_PAGE_URL + "/doc",
+                LANDING_PAGE_URL + "/doc/",
                 rel=RelType.SERVICE_DOC,
                 type=MediaType.HTML,
                 hreflang=HrefLang.EN,
@@ -59,19 +68,14 @@ class LandingPage:
         if other_links is not None:
             self.links.extend(other_links)
 
-        self.title = title
-        self.description = markdown.markdown(description) if description is not None else None
-
 
 class LandingPageRenderer(Renderer):
     def __init__(
             self,
             request,
             other_links: List[Link] = None,
-            title: str = None,
-            description: str = None):
-
-        self.landing_page = LandingPage(other_links=other_links, title=title, description=description)
+    ):
+        self.landing_page = LandingPage(other_links=other_links)
 
         super().__init__(request, self.landing_page.uri, {"oai": profile_openapi, "dcat": profile_dcat}, "oai")
 

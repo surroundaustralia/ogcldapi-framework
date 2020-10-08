@@ -22,34 +22,10 @@ blueprint = Blueprint('api', __name__)
 
 @app.route("/")
 def landing_page():
-    # make dummy Landing Page data
-    title = "Geofabric OGC API"
-    description = "An OGC API and Linked Data API delivering information from the Australian Hydrological Geospatial " \
-                  "Fabric (Geofabric) dataset"
-    q = """
-        # Get Dataset
-        PREFIX ogcapi: <https://data.surroundaustralia.com/def/ogcapi/>
-        PREFIX dcterms: <http://purl.org/dc/terms/>
-        
-        SELECT ?uri ?title ?description
-        WHERE {
-            ?uri a ogcapi:OgcApi ;
-                 dcterms:title ?title ;
-                 dcterms:description ?description
-        }
-        """
-    graph = get_graph()
-
     try:
-        for s in graph.subjects(predicate=RDF.type, object=DCAT.Dataset):
-            for p, o in graph.predicate_objects(subject=s):
-                if p == DCTERMS.title:
-                    title = str(o)
-                elif p == DCTERMS.description:
-                    description = str(o)
-
-        return LandingPageRenderer(request, title=title, description=description).render()
-    except:
+        return LandingPageRenderer(request).render()
+    except Exception as e:
+        logging.debug(e)
         return Response(
             "The API cannot connect to its data source, Check your SPARQL endpoint (you gave {}) "
             "and the query".format(SPARQL_ENDPOINT),
@@ -129,30 +105,20 @@ class CollectionsRoute(Resource):
 @api.param("collection_id", "The ID of a Collection delivered by this API. See /collections for the list.")
 class CollectionRoute(Resource):
     def get(self, collection_id):
-        c = Collection(collection_id)
-        q = """
-            # Get Collection
-            PREFIX ogcapi: <https://data.surroundaustralia.com/def/ogcapi/>
-            PREFIX dcterms: <http://purl.org/dc/terms/>
-            
-            SELECT ?uri ?title ?description
-            WHERE {{
-                ?uri a ogcapi:Collection ;
-                     dcterms:identifier "{}" ;
-                     dcterms:title ?title ;
-                     dcterms:description ?description .
-            }}
-            """.format(collection_id)
+        g = get_graph()
+        # get the URI for the Collection using the ID
+        collection_uri = None
+        for s in g.subjects(predicate=DCTERMS.identifier, object=Literal(collection_id)):
+            collection_uri = s
 
-        graph = get_graph()
-        for s in graph.subjects(predicate=DCTERMS.identifier, object=Literal(collection_id)):
-            for p, o in graph.predicate_objects(subject=s):
-                if p == DCTERMS.title:
-                    c.title = str(o)
-                elif p == DCTERMS.description:
-                    c.description = str(o)
+        if collection_uri is None:
+            return Response(
+                "You have entered an unknown Collection ID",
+                status=400,
+                mimetype="text/plain"
+            )
 
-            return CollectionRenderer(request, c).render()
+        return CollectionRenderer(request, collection_uri).render()
 
 
 @api.route("/collections/<string:collection_id>/items")
@@ -167,50 +133,30 @@ class FeaturesRoute(Resource):
 @api.param("item_id", "The ID of a Feature in this Collection's list of Items")
 class FeatureRoute(Resource):
     def get(self, collection_id, item_id):
-        q = """
-            PREFIX dcterms: <http://purl.org/dc/terms/>
-            PREFIX ogcapi: <https://data.surroundaustralia.com/def/ogcapi/>
-            
-            SELECT ?identifier ?title ?description
-            WHERE {{
-                ?uri a ogcapi:Feature ;
-                   dcterms:isPartOf <{}> ;
-                   dcterms:identifier ?identifier ;
-                   OPTIONAL {{?uri dcterms:title ?title}}
-                   OPTIONAL {{?uri dcterms:description ?description}}
-            }}
-            """.format(collection_id)
+        g = get_graph()
+        # get the URI for the Collection using the ID
+        collection_uri = None
+        for s in g.subjects(predicate=DCTERMS.identifier, object=Literal(collection_id)):
+            collection_uri = s
 
-        graph = get_graph()
-        for s in graph.subjects(predicate=DCTERMS.identifier, object=Literal(item_id)):
-            feature = Feature(str(s), item_id, collection_id)
-            for p, o in graph.predicate_objects(subject=s):
-                if p == DCTERMS.title:
-                    feature.title = str(o)
-                elif p == DCTERMS.description:
-                    feature.description = str(o)
-            # out of band call for Geometries as BNodes not supported by SPARQLStore
-            q = """
-                PREFIX geo: <http://www.opengis.net/ont/geosparql#>
-                PREFIX geox: <http://linked.data.gov.au/def/geox#>
-                SELECT * 
-                WHERE {{
-                    <{}>
-                        geo:hasGeometry/geo:asWKT ?g1 ;
-                        geo:hasGeometry/geox:asDGGS ?g2 .
-                }}
-                """.format(feature.uri)
-            from SPARQLWrapper import SPARQLWrapper, JSON
-            sparql = SPARQLWrapper(SPARQL_ENDPOINT)
-            sparql.setQuery(q)
-            sparql.setReturnFormat(JSON)
-            ret = sparql.queryAndConvert()["results"]["bindings"]
-            feature.geometries = [
-                Geometry(ret[0]["g1"]["value"], GeometryRole.Boundary, "WGS84 Geometry", CRS.WGS84),
-                Geometry(ret[0]["g2"]["value"], GeometryRole.Boundary, "TB16Pix Geometry", CRS.TB16PIX),
-            ]
+        if collection_uri is None:
+            return Response(
+                "You have entered an unknown Collection ID",
+                status=400,
+                mimetype="text/plain"
+            )
 
-            return FeatureRenderer(request, feature).render()
+        # get URIs for things with this ID  - IDs may not be unique across Collections
+        for s in g.subjects(predicate=DCTERMS.identifier, object=Literal(item_id)):
+            # if this Feature is in this Collection, return it
+            if (s, DCTERMS.isPartOf, collection_uri) in g:
+                return FeatureRenderer(request, str(s)).render()
+
+        return Response(
+            "The Feature you have entered the ID for is not part of the Collection you entered the ID for",
+            status=400,
+            mimetype="text/plain"
+        )
 
 
 @api.route("/object")

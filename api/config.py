@@ -21,12 +21,12 @@ LANDING_PAGE_URL = "http://localhost:5000"
 API_TITLE = "OGC LD API"
 VERSION = "1.1"
 
-DATASET_URI = "https://w3id.org/dggs/asgs"
+DATASET_URI = "https://w3id.org/dggs/asgs2016"
 SPARQL_ENDPOINT = "http://localhost:7200/repositories/asgs2016_dggs"
 
 
 def get_graph():
-    graph = Graph("SPARQLStore", identifier="http://www.openrdf.org/schema/sesame#nil")
-    graph.open(SPARQL_ENDPOINT)
+    g = Graph("SPARQLStore")
+    g.open(SPARQL_ENDPOINT)
 
-    return graph
+    return g

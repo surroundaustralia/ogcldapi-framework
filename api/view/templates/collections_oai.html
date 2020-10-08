@@ -6,7 +6,7 @@
   <div id="maincontent">
     <ul>
     {% for collection in collections  %}
-      <li><a href="{{ collection.uri }}">{{ collection.title }}</a></li>
+      <li><a href="{{ collection[0] }}">{{ collection[1] }}</a></li>
     {% endfor %}
     </ul>
   </div>

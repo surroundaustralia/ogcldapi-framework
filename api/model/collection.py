@@ -7,53 +7,94 @@ from flask import Response, render_template
 from .spatial_object import SpatialExtent, TemporalExtent
 from .feature import Feature
 import markdown
+from rdflib import URIRef, Literal
+from rdflib.namespace import DCTERMS
 
 
 class Collection(object):
     def __init__(
             self,
-            id: str,
-            title: str = None,
-            description: str = None,
-            extent_spatial: SpatialExtent = None,
-            extent_temporal: TemporalExtent = None,
+            uri: str,
             other_links: List[Link] = None,
-            features: List[Feature] = None,
-            feature_count: int = None
     ):
-        self.id = id
-        self.uri = LANDING_PAGE_URL + "/collections/" + id
-        self.title = title
-        self.description = markdown.markdown(description) if description is not None else None
-        self.extent_spatial = extent_spatial
-        self.extent_temporal = extent_temporal
+        self.uri = uri
+        g = get_graph()
+        # Feature properties
+        self.description = None
+        for p, o in g.predicate_objects(subject=URIRef(self.uri)):
+            if p == DCTERMS.title:
+                self.title = str(o)
+            elif p == DCTERMS.identifier:
+                self.identifier = str(o)
+            elif p == DCTERMS.description:
+                self.description = markdown.markdown(str(o))
+
+        # Collection other properties
+        self.extent_spatial = None
+        self.extent_temporal = None
         self.links = [
-            Link(LANDING_PAGE_URL + "/collections/" + id + "/items",
+            Link(LANDING_PAGE_URL + "/collections/" + self.identifier + "/items",
                  rel=RelType.ITEMS.value,
                  type=MediaType.GEOJSON.value,
                  title=self.title)
         ]
         if other_links is not None:
             self.links.extend(other_links)
-        self.features = features
-        if feature_count is not None:
-            self.feature_count = feature_count
-        elif self.features is not None:
-            self.feature_count = len(self.features)
-        else:
-            self.feature_count = None
+
+        self.feature_count = 0
+        for s in g.subjects(predicate=DCTERMS.isPartOf, object=URIRef(self.uri)):
+            self.feature_count += 1
 
     def to_dict(self):
         self.links = [x.__dict__ for x in self.links]
-        if self.features is not None:
-            self.features = [x.to_dict() for x in self.features]
 
+        delattr(self, "feature_count")  # this attribute is for internal use only and can be misleading if communicated
         return self.__dict__
+
+    def to_geo_json_dict(self):
+        self.links = [x.__dict__ for x in self.links]
+
+        delattr(self, "feature_count")  # this attribute is for internal use only and can be misleading if communicated
+        return self.__dict__
+
+    def to_geosp_graph(self):
+        g = Graph()
+        g.bind("geo", GEO)
+        g.bind("geox", GEOX)
+        g.bind("dcterms", DCTERMS)
+
+        c = URIRef(self.uri)
+
+        g.add((
+            c,
+            RDF.type,
+            DCTERMS.Collection
+        ))
+
+        g.add((
+            c,
+            DCTERMS.identifier(),
+            Literal(self.identifier)
+        ))
+
+        g.add((
+            c,
+            DCTERMS.title,
+            Literal(self.title)
+        ))
+
+        g.add((
+            c,
+            DCTERMS.description,
+            Literal(self.description)
+        ))
+
+        return g
 
 
 class CollectionRenderer(Renderer):
-    def __init__(self, request, collection: Collection, other_links: List[Link] = None):
-        self.collection = collection
+    def __init__(self, request, collection_uri: str, other_links: List[Link] = None):
+        self.collection = Collection(collection_uri)
         self.links = [
             Link(
                 LANDING_PAGE_URL + "/collections.json",
@@ -73,12 +114,12 @@ class CollectionRenderer(Renderer):
 
         super().__init__(
             request,
-            LANDING_PAGE_URL + "/collection/" + self.collection.id,
+            LANDING_PAGE_URL + "/collection/" + self.collection.identifier,
             profiles={"oai": profile_openapi},
             default_profile_token="oai"
         )
 
-        self.ALLOWED_PARAMS = ["_profile", "_view", "_mediatype"]
+        self.ALLOWED_PARAMS = ["_profile", "_mediatype"]
 
     def render(self):
         for v in self.request.values.items():
@@ -90,7 +131,7 @@ class CollectionRenderer(Renderer):
         if response is not None:
             return response
         elif self.profile == "oai":
-            if self.mediatype == "application/json":
+            if self.mediatype == MediaType.JSON.value:
                 return self._render_oai_json()
             else:
                 return self._render_oai_html()

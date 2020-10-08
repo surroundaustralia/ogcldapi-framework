@@ -11,65 +11,28 @@ from rdflib import URIRef
 from rdflib.namespace import DCTERMS, RDF
 
 
-class CollectionsList:
-    def __init__(self, request):
-        page = (
-            int(request.values.get("page")) if request.values.get("page") is not None else 1
-        )
-        per_page = (
-            int(request.values.get("per_page"))
-            if request.values.get("per_page") is not None
-            else 20
-        )
-        # limit
-        limit = int(request.values.get("limit")) if request.values.get("limit") is not None else None
-
-        # if limit is set, ignore page & per_page
-        if limit is not None:
-            start = 0
-            end = limit
-        else:
-            # generate list for requested page and per_page
-            start = (page - 1) * per_page
-            end = start + per_page
-
+class Collections:
+    def __init__(self):
         self.collections = []
-        q = """
-            PREFIX ogcapi: <https://data.surroundaustralia.com/def/ogcapi/>
-            PREFIX dcterms: <http://purl.org/dc/terms/>
+        g = get_graph()
+        for s in g.subjects(predicate=RDF.type, object=OGCAPI.Collection):
+            if (s, DCTERMS.isPartOf, URIRef(DATASET_URI)) in g:
+                identifier = None
+                title = None
+                description = None
+                for p, o in g.predicate_objects(subject=s):
+                    if p == DCTERMS.identifier:
+                        identifier = str(o)
+                    elif p == DCTERMS.title:
+                        title = str(o)
+                    elif p == DCTERMS.description:
+                        description = str(o)
 
-            SELECT ?uri ?identifier ?title ?description
-            WHERE {{
-                ?uri a ogcapi:Collection ;
-                     dcterms:isPartOf <{}> ;
-                     dcterms:identifier ?identifier ;
-                     dcterms:title ?title ;
-                     dcterms:description ?description .
-            }}
-            ORDER BY ?identifier 
-            """.format(DATASET_URI)
-        graph = get_graph()
-        candidates = []
-        for s in graph.subjects(predicate=RDF.type, object=OGCAPI.Collection):
-            candidates.append(s)
-        for candidate in candidates:
-            if not (candidate, DCTERMS.isPartOf, URIRef(DATASET_URI)) in graph:
-                candidates.remove(candidate)
-        for candidate in candidates:
-            for p, o in graph.predicate_objects(subject=candidate):
-                if p == DCTERMS.identifier:
-                    identifier = str(o)
-                elif p == DCTERMS.title:
-                    title = str(o)
-                elif p == DCTERMS.description:
-                    description = str(o)
-
-            self.collections.append(Collection(identifier, title=title, description=description))
+                self.collections.append((str(s), identifier, title, description))
 
 
 class CollectionsRenderer(ContainerRenderer):
     def __init__(self, request, other_links: List[Link] = None):
-        self.id = id
         self.links = [
             Link(
                 LANDING_PAGE_URL + "/collections.json",
@@ -87,7 +50,29 @@ class CollectionsRenderer(ContainerRenderer):
         if other_links is not None:
             self.links.extend(other_links)
 
-        self.collections = CollectionsList(request).collections
+        self.page = (
+            int(request.values.get("page")) if request.values.get("page") is not None else 1
+        )
+        self.per_page = (
+            int(request.values.get("per_page"))
+            if request.values.get("per_page") is not None
+            else 20
+        )
+        # limit
+        limit = int(request.values.get("limit")) if request.values.get("limit") is not None else None
+
+        # if limit is set, ignore page & per_page
+        if limit is not None:
+            self.start = 0
+            self.end = limit
+        else:
+            # generate list for requested page and per_page
+            self.start = (self.page - 1) * self.per_page
+            self.end = self.start + self.per_page
+
+        collections = Collections().collections
+        self.collections_count = len(collections)
+        requested_collections = collections[self.start:self.end]
 
         super().__init__(
             request,
@@ -96,8 +81,8 @@ class CollectionsRenderer(ContainerRenderer):
             "The Collections of Features delivered by this OGC API instance",
             None,
             None,
-            [(LANDING_PAGE_URL + "/collections/items/" + x.id, x.title) for x in self.collections],
-            len(self.collections),
+            [(LANDING_PAGE_URL + "/collections/" + x[1], x[2]) for x in requested_collections],
+            self.collections_count,
             profiles={"oai": profile_openapi},
             default_profile_token="oai"
         )
@@ -132,23 +117,11 @@ class CollectionsRenderer(ContainerRenderer):
         )
 
     def _render_oai_html(self):
-        page = (
-            int(self.request.values.get("page"))
-            if self.request.values.get("page") is not None
-            else 1
-        )
-        per_page = (
-            int(self.request.values.get("per_page"))
-            if self.request.values.get("per_page") is not None
-            else 20
-        )
-        limit = int(self.request.values.get("limit")) if self.request.values.get("limit") is not None else None
-
-        pagination = Pagination(page=page, per_page=per_page, total=limit if limit is not None else len(self.collections))
+        pagination = Pagination(page=self.page, per_page=self.per_page, total=self.collections_count)
 
         _template_context = {
             "links": self.links,
-            "collections": self.collections,
+            "collections": self.members,
             "pagination": pagination
         }
 

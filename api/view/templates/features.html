@@ -9,8 +9,8 @@
       <h4>Filtered by {{ bbox[0] }}: <code>{{ bbox[1] }}</code></h4>
     {% endif %}
     <ul>
-    {% for feature in collection.features %}
-      <li><a href="items/{{ feature.id }}">{{ feature.title }}</a></li>
+    {% for feature in members %}
+      <li><a href="{{ feature[0] }}">{{ feature[1] }}</a></li>
     {% endfor %}
     </ul>
     {{ pagination.links }}

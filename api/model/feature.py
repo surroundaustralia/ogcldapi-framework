@@ -6,6 +6,7 @@ import json
 from flask import Response, render_template
 from .spatial_object import SpatialExtent, TemporalExtent
 from rdflib import URIRef, Literal
+from rdflib.namespace import DCTERMS
 from enum import Enum
 from geomet import wkt
 from geojson_rewind import rewind
@@ -13,13 +14,13 @@ import markdown
 
 
 class GeometryRole(Enum):
-    Boundary = "http://linked.data.gov.au/def/geometry-roles/boundary"
-    BoundingBox = "http://linked.data.gov.au/def/geometry-roles/bounding-box"
-    BoundingCircle = "http://linked.data.gov.au/def/geometry-roles/bounding-circle"
-    Concave = "http://linked.data.gov.au/def/geometry-roles/concave-hull"
-    Convex = "http://linked.data.gov.au/def/geometry-roles/convex-hull"
-    Centroid = "http://linked.data.gov.au/def/geometry-roles/centroid"
-    Detailed = "http://linked.data.gov.au/def/geometry-roles/detailed"
+    Boundary = "https://linked.data.gov.au/def/geometry-roles/boundary"
+    BoundingBox = "https://linked.data.gov.au/def/geometry-roles/bounding-box"
+    BoundingCircle = "https://linked.data.gov.au/def/geometry-roles/bounding-circle"
+    Concave = "https://linked.data.gov.au/def/geometry-roles/concave-hull"
+    Convex = "https://linked.data.gov.au/def/geometry-roles/convex-hull"
+    Centroid = "https://linked.data.gov.au/def/geometry-roles/centroid"
+    Detailed = "https://linked.data.gov.au/def/geometry-roles/detailed"
 
 
 class CRS(Enum):
@@ -54,31 +55,71 @@ class Feature(object):
     def __init__(
             self,
             uri: str,
-            id: str,
-            isPartOf: str,
-            title: str = None,
-            description: str = None,
-            extent_spatial: SpatialExtent = None,
-            extent_temporal: TemporalExtent = None,
             other_links: List[Link] = None,
-            geometries: List[Geometry] = None
     ):
         self.uri = uri
-        self.id = id
-        self.isPartOf = isPartOf
-        self.title = title
-        self.description = markdown.markdown(description) if description is not None else None
-        self.extent_spatial = extent_spatial
-        self.extent_temporal = extent_temporal
+
+        q = """
+            PREFIX dcterms: <http://purl.org/dc/terms/>
+            PREFIX ogcapi: <https://data.surroundaustralia.com/def/ogcapi/>
+
+            SELECT ?identifier ?title ?description
+            WHERE {{
+                ?uri a ogcapi:Feature ;
+                   dcterms:isPartOf <{}> ;
+                   dcterms:identifier ?identifier ;
+                   OPTIONAL {{?uri dcterms:title ?title}}
+                   OPTIONAL {{?uri dcterms:description ?description}}
+            }}
+            """  # .format(collection_id)
+        g = get_graph()
+        # Feature properties
+        self.description = None
+        for p, o in g.predicate_objects(subject=URIRef(self.uri)):
+            if p == DCTERMS.identifier:
+                self.identifier = str(o)
+            elif p == DCTERMS.title:
+                self.title = str(o)
+            elif p == DCTERMS.description:
+                self.description = markdown.markdown(str(o))
+            elif p == DCTERMS.isPartOf:
+                self.isPartOf = str(o)
+            elif p == DCTERMS.description:
+                self.description = markdown.markdown(str(o)) if str(o) is not None else None
+
+        # Feature geometries
+        # out of band call for Geometries as BNodes not supported by SPARQLStore
+        q = """
+            PREFIX geo: <http://www.opengis.net/ont/geosparql#>
+            PREFIX geox: <https://linked.data.gov.au/def/geox#>
+            SELECT * 
+            WHERE {{
+                <{}>
+                    geo:hasGeometry/geo:asWKT ?g1 ;
+                    geo:hasGeometry/geox:asDGGS ?g2 .
+            }}
+            """.format(self.uri)
+        from SPARQLWrapper import SPARQLWrapper, JSON
+        sparql = SPARQLWrapper(SPARQL_ENDPOINT)
+        sparql.setQuery(q)
+        sparql.setReturnFormat(JSON)
+        ret = sparql.queryAndConvert()["results"]["bindings"]
+        self.geometries = [
+            Geometry(ret[0]["g1"]["value"], GeometryRole.Boundary, "WGS84 Geometry", CRS.WGS84),
+            Geometry(ret[0]["g2"]["value"], GeometryRole.Boundary, "TB16Pix Geometry", CRS.TB16PIX),
+        ]
+
+        # Feature other properties
+        self.extent_spatial = None
+        self.extent_temporal = None
         self.links = [
-            Link(LANDING_PAGE_URL + "/collections/" + id + "/items",
+            Link(LANDING_PAGE_URL + "/collections/" + self.identifier + "/items",
                  rel=RelType.ITEMS.value,
                  type=MediaType.GEOJSON.value,
                  title=self.title)
         ]
         if other_links is not None:
             self.links.extend(other_links)
-        self.geometries = geometries
 
     def to_dict(self):
         self.links = [x.__dict__ for x in self.links]
@@ -114,17 +155,65 @@ class Feature(object):
             "properties": properties
         }
 
+    def to_geosp_graph(self):
+        g = Graph()
+        g.bind("geo", GEO)
+        g.bind("geox", GEOX)
+
+        f = URIRef(self.uri)
+        g.add((
+            f,
+            RDF.type,
+            GEO.Feature
+        ))
+        for geom in self.geometries:
+            this_geom = BNode()
+            g.add((
+                f,
+                GEO.hasGeometry,
+                this_geom
+            ))
+            g.add((
+                this_geom,
+                RDFS.label,
+                Literal(geom.label)
+            ))
+            g.add((
+                this_geom,
+                GEOX.hasRole,
+                URIRef(geom.role.value)
+            ))
+            g.add((
+                this_geom,
+                GEOX.inCRS,
+                URIRef(geom.crs.value)
+            ))
+            if geom.crs == CRS.TB16PIX:
+                g.add((
+                    this_geom,
+                    GEOX.asDGGS,
+                    Literal(geom.coordinates, datatype=GEOX.DggsLiteral)
+                ))
+            else:  # WGS84
+                g.add((
+                    this_geom,
+                    GEO.asWKT,
+                    Literal(geom.coordinates, datatype=GEO.WktLiteral)
+                ))
+
+        return g
+
 
 class FeatureRenderer(Renderer):
-    def __init__(self, request, feature: Feature, other_links: List[Link] = None):
-        self.feature = feature
+    def __init__(self, request, feature_uri: str, other_links: List[Link] = None):
+        self.feature = Feature(feature_uri)
         self.links = []
         if other_links is not None:
             self.links.extend(other_links)
 
         super().__init__(
             request,
-            LANDING_PAGE_URL + "/collections/" + self.feature.isPartOf + "/item/" + self.feature.id,
+            LANDING_PAGE_URL + "/collections/" + self.feature.isPartOf + "/item/" + self.feature.identifier,
             profiles={"oai": profile_openapi, "geosp": profile_geosparql},
             default_profile_token="oai"
         )
@@ -185,50 +274,7 @@ class FeatureRenderer(Renderer):
         )
 
     def _render_geosp_rdf(self):
-        g = Graph()
-        g.bind("geo", GEO)
-        g.bind("geox", GEOX)
-
-        f = URIRef(self.feature.uri)
-        g.add((
-            f,
-            RDF.type,
-            GEO.Feature
-        ))
-        for geom in self.feature.geometries:
-            this_geom = BNode()
-            g.add((
-                f,
-                GEO.hasGeometry,
-                this_geom
-            ))
-            g.add((
-                this_geom,
-                RDFS.label,
-                Literal(geom.label)
-            ))
-            g.add((
-                this_geom,
-                GEOX.hasRole,
-                URIRef(geom.role.value)
-            ))
-            g.add((
-                this_geom,
-                GEOX.inCRS,
-                URIRef(geom.crs.value)
-            ))
-            if geom.crs == CRS.TB16PIX:
-                g.add((
-                    this_geom,
-                    GEOX.asDGGS,
-                    Literal(geom.coordinates, datatype=GEOX.DggsLiteral)
-                ))
-            else:  # WGS84
-                g.add((
-                    this_geom,
-                    GEO.asWKT,
-                    Literal(geom.coordinates, datatype=GEO.WktLiteral)
-                ))
+        g = self.feature.to_geosp_graph()
 
         # serialise in the appropriate RDF format
         if self.mediatype in ["application/rdf+json", "application/json"]:
