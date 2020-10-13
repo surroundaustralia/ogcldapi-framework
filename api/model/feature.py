@@ -84,8 +84,6 @@ class Feature(object):
                 self.description = markdown.markdown(str(o))
             elif p == DCTERMS.isPartOf:
                 self.isPartOf = str(o)
-            elif p == DCTERMS.description:
-                self.description = markdown.markdown(str(o)) if str(o) is not None else None
 
         # Feature geometries
         # out of band call for Geometries as BNodes not supported by SPARQLStore
