@@ -156,7 +156,7 @@ class FeaturesList:
                    dcterms:isPartOf <https://linked.data.gov.au/dataset/asgs2016/statisticalarealevel1/> .
                 ?f geo:hasGeometry/geox:asDGGS ?dggs .
 
-                BIND (STRAFTER(STR(?dggs), "> ") AS ?coords)
+                BIND (STRBEFORE(STRAFTER(STR(?dggs), "POLYGON ("), ")")AS ?coords)
 
                 FILTER CONTAINS(?coords, "{}")
             }}
