@@ -153,14 +153,14 @@ class FeaturesList:
             SELECT ?f
             WHERE {{
                 ?f a ogcapi:Feature ;
-                   dcterms:isPartOf <https://linked.data.gov.au/dataset/asgs2016/statisticalarealevel1/> .
+                   dcterms:isPartOf <{}> .
                 ?f geo:hasGeometry/geox:asDGGS ?dggs .
 
                 BIND (STRBEFORE(STRAFTER(STR(?dggs), "POLYGON ("), ")")AS ?coords)
 
                 FILTER CONTAINS(?coords, "{}")
             }}
-            """.format(self.request.values.get("bbox"))
+            """.format(self.collection.uri, self.request.values.get("bbox"))
         # TODO: update as RDFlib updates
         # for r in get_graph().query(q):
         #     features_uris.append((r["f"], r["prefLabel"]))
