@@ -1,6 +1,6 @@
-from .link import *
+from api.model.link import *
 from flask import Response, render_template
-from .profiles import *
+from api.model.profiles import *
 from config import *
 import json
 

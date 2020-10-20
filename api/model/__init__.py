@@ -1,7 +1,7 @@
-from .landing_page import LandingPageRenderer
-from .api_desc import ApiDescRenderer
-from .conformance import ConformanceRenderer
-from .collections import CollectionsRenderer
-from .collection import Collection, CollectionRenderer
-from .features import FeaturesRenderer
-from .feature import Feature, FeatureRenderer, Geometry, GeometryRole, CRS
+from api.model.landing_page import LandingPageRenderer
+from api.model.api_desc import ApiDescRenderer
+from api.model.conformance import ConformanceRenderer
+from api.model.collections import CollectionsRenderer
+from api.model.collection import Collection, CollectionRenderer
+from api.model.features import FeaturesRenderer
+from api.model.feature import Feature, FeatureRenderer, Geometry, GeometryRole, CRS

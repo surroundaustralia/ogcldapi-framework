@@ -1,10 +1,10 @@
 from typing import List
-from .link import *
+from api.model.link import *
 from flask import Response, render_template
-from rdflib import Graph, URIRef, Literal, RDF, RDFS, BNode
+from rdflib import URIRef, Literal
 from rdflib.namespace import DCAT, DCTERMS
-from .profiles import *
-from config import *
+from api.model.profiles import *
+from api.config import *
 import json
 import markdown
 

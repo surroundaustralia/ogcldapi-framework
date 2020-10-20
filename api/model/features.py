@@ -1,10 +1,10 @@
-from pyldapi import Renderer, ContainerRenderer
+from pyldapi import ContainerRenderer
 from typing import List
-from .profiles import *
-from config import *
-from .link import *
-from .collection import Collection
-from .feature import Feature
+from api.model.profiles import *
+from api.config import *
+from api.model.link import *
+from api.model.collection import Collection
+from api.model.feature import Feature
 import json
 from flask import Response, render_template
 from flask_paginate import Pagination
@@ -281,7 +281,8 @@ class FeaturesRenderer(ContainerRenderer):
             return Response(
                 self.valid[1],
                 status=400,
-                mimetype="text/plain"
+                mimetype="text/plain",
+                headers=self.headers
             )
 
         # try returning alt profile
@@ -354,9 +355,9 @@ class FeaturesRenderer(ContainerRenderer):
 
         # serialise in the appropriate RDF format
         if self.mediatype in ["application/rdf+json", "application/json"]:
-            return Response(g.serialize(format="json-ld"), mimetype=self.mediatype)
+            return Response(g.serialize(format="json-ld"), mimetype=self.mediatype, headers=self.headers)
         elif self.mediatype in Renderer.RDF_MEDIA_TYPES:
-            return Response(g.serialize(format=self.mediatype), mimetype=self.mediatype)
+            return Response(g.serialize(format=self.mediatype), mimetype=self.mediatype, headers=self.headers)
         else:
             return Response(
                 "The Media Type you requested cannot be serialized to",

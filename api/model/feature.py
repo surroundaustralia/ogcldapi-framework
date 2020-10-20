@@ -1,10 +1,10 @@
 from typing import List
-from .profiles import *
-from config import *
-from .link import *
+from api.model.profiles import *
+from api.config import *
+from api.model.link import *
 import json
 from flask import Response, render_template
-from .spatial_object import SpatialExtent, TemporalExtent
+from api.model.spatial_object import SpatialExtent, TemporalExtent
 from rdflib import URIRef, Literal
 from rdflib.namespace import DCTERMS
 from enum import Enum
@@ -276,9 +276,9 @@ class FeatureRenderer(Renderer):
 
         # serialise in the appropriate RDF format
         if self.mediatype in ["application/rdf+json", "application/json"]:
-            return Response(g.serialize(format="json-ld"), mimetype=self.mediatype)
+            return Response(g.serialize(format="json-ld"), mimetype=self.mediatype, headers=self.headers)
         elif self.mediatype in Renderer.RDF_MEDIA_TYPES:
-            return Response(g.serialize(format=self.mediatype), mimetype=self.mediatype)
+            return Response(g.serialize(format=self.mediatype), mimetype=self.mediatype, headers=self.headers)
         else:
             return Response(
                 "The Media Type you requested cannot be serialized to",
