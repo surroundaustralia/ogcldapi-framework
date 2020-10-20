@@ -116,7 +116,7 @@ class FeaturesList:
                    dcterms:isPartOf <{collection_uri}> ;            
                    geo:hasGeometry/geo:asWKT ?wkt .
     
-                FILTER (geof:sfWithin(?wkt, 
+                FILTER (geof:sfOverlaps(?wkt, 
                     '''
                     <http://www.opengis.net/def/crs/OGC/1.3/CRS84>
                     POLYGON ((
@@ -143,66 +143,66 @@ class FeaturesList:
         return features_uris
 
     def _get_filtered_features_list_bbox_dggs(self):
-        # # geo:sfIntersects - any Cell of the Feature is within the BBox
+        # geo:sfOverlaps - any Cell of the Feature is within the BBox
+        q = """
+            PREFIX dcterms: <http://purl.org/dc/terms/>
+            PREFIX geo: <http://www.opengis.net/ont/geosparql#>
+            PREFIX geox: <https://linked.data.gov.au/def/geox#>
+            PREFIX ogcapi: <https://data.surroundaustralia.com/def/ogcapi/>
+
+            SELECT ?f
+            WHERE {{
+                ?f a ogcapi:Feature ;
+                   dcterms:isPartOf <https://linked.data.gov.au/dataset/asgs2016/statisticalarealevel1/> .
+                ?f geo:hasGeometry/geox:asDGGS ?dggs .
+
+                BIND (STRAFTER(STR(?dggs), "> ") AS ?coords)
+
+                FILTER CONTAINS(?coords, "{}")
+            }}
+            """.format(self.request.values.get("bbox"))
+        # TODO: update as RDFlib updates
+        # for r in get_graph().query(q):
+        #     features_uris.append((r["f"], r["prefLabel"]))
+        from SPARQLWrapper import SPARQLWrapper, JSON
+        sparql = SPARQLWrapper(SPARQL_ENDPOINT)
+        sparql.setQuery(q)
+        sparql.setReturnFormat(JSON)
+        ret = sparql.queryAndConvert()["results"]["bindings"]
+        return [URIRef(r["f"]["value"]) for r in ret]
+
+        # geo:sfWithin - every Cell of the Feature is within the BBox
         # q = """
         #     PREFIX dcterms: <http://purl.org/dc/terms/>
         #     PREFIX geo: <http://www.opengis.net/ont/geosparql#>
         #     PREFIX geox: <https://linked.data.gov.au/def/geox#>
         #     PREFIX ogcapi: <https://data.surroundaustralia.com/def/ogcapi/>
         #
-        #     SELECT ?f
+        #     SELECT ?f ?coords
         #     WHERE {{
         #         ?f a ogcapi:Feature ;
-        #            dcterms:isPartOf <https://linked.data.gov.au/dataset/asgs2016/statisticalarealevel1/> .
+        #            dcterms:isPartOf <{}> .
         #         ?f geo:hasGeometry/geox:asDGGS ?dggs .
         #
-        #         BIND (STRAFTER(STR(?dggs), "> ") AS ?coords)
-        #
-        #         FILTER CONTAINS(?coords, "{}")
+        #         BIND (STRBEFORE(STRAFTER(STR(?dggs), "POLYGON ("), ")")AS ?coords)
         #     }}
-        #     """.format(self.request.values.get("bbox"))
-        # # TODO: update as RDFlib updates
-        # # for r in get_graph().query(q):
-        # #     features_uris.append((r["f"], r["prefLabel"]))
+        #     """.format(self.collection.uri)
         # from SPARQLWrapper import SPARQLWrapper, JSON
         # sparql = SPARQLWrapper(SPARQL_ENDPOINT)
         # sparql.setQuery(q)
         # sparql.setReturnFormat(JSON)
         # ret = sparql.queryAndConvert()["results"]["bindings"]
-        # return [URIRef(r["f"]["value"]) for r in ret]
-
-        # geo:sfWithin - every Cell of the Feature is within the BBox
-        q = """
-            PREFIX dcterms: <http://purl.org/dc/terms/>
-            PREFIX geo: <http://www.opengis.net/ont/geosparql#>
-            PREFIX geox: <https://linked.data.gov.au/def/geox#>
-            PREFIX ogcapi: <https://data.surroundaustralia.com/def/ogcapi/>            
-            
-            SELECT ?f ?coords
-            WHERE {{
-                ?f a ogcapi:Feature ;
-                   dcterms:isPartOf <{}> .
-                ?f geo:hasGeometry/geox:asDGGS ?dggs .
-    
-                BIND (STRBEFORE(STRAFTER(STR(?dggs), "POLYGON ("), ")")AS ?coords)
-            }}
-            """.format(self.collection.uri)
-        from SPARQLWrapper import SPARQLWrapper, JSON
-        sparql = SPARQLWrapper(SPARQL_ENDPOINT)
-        sparql.setQuery(q)
-        sparql.setReturnFormat(JSON)
-        ret = sparql.queryAndConvert()["results"]["bindings"]
-        feature_ids = []
-        for r in ret:
-            within = True
-            for cell in r["coords"]["value"].split(" "):
-                if not str(cell).startswith(self.request.values.get("bbox")):
-                    within = False
-                    break
-            if within:
-                feature_ids.append(URIRef(r["f"]["value"]))
-
-        return feature_ids
+        # feature_ids = []
+        # for r in ret:
+        #     within = True
+        #     for cell in r["coords"]["value"].split(" "):
+        #         if not str(cell).startswith(self.request.values.get("bbox")):
+        #             within = False
+        #             break
+        #     if within:
+        #         feature_ids.append(URIRef(r["f"]["value"]))
+        #
+        # return feature_ids
 
     def _get_filtered_features_list_bbox_paging(self):
         pass
