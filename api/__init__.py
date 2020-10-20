@@ -1,1 +1,1 @@
-from .link import *
+from api.model.link import *
