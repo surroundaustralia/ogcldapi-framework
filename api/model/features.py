@@ -9,7 +9,7 @@ import json
 from flask import Response, render_template
 from flask_paginate import Pagination
 from rdflib import Graph, Literal, URIRef
-from rdflib.namespace import DCAT, DCTERMS, RDF
+from rdflib.namespace import DCTERMS, XSD
 import re
 
 
@@ -348,10 +348,41 @@ class FeaturesRenderer(ContainerRenderer):
     def _render_geosp_rdf(self):
         g = Graph()
 
+        LDP = Namespace('http://www.w3.org/ns/ldp#')
+        g.bind('ldp', LDP)
+
+        XHV = Namespace('https://www.w3.org/1999/xhtml/vocab#')
+        g.bind('xhv', XHV)
+
+        page_uri_str = self.request.base_url + '?per_page=' + str(self.per_page) + '&page=' + str(self.page)
+        page_uri_str_nonum = self.request.base_url + '?per_page=' + str(self.per_page) + '&page='
+        page_uri = URIRef(page_uri_str)
+
+        # pagination
+        # this page
+        g.add((page_uri, RDF.type, LDP.Page))
+        g.add((page_uri, LDP.pageOf, URIRef(self.feature_list.collection.uri)))
+
+        # links to other pages
+        g.add((page_uri, XHV.first, URIRef(page_uri_str_nonum + '1')))
+        g.add((page_uri, XHV.last, URIRef(page_uri_str_nonum + str(self.last_page))))
+
+        if self.page != 1:
+            g.add((page_uri, XHV.prev, URIRef(page_uri_str_nonum + str(self.page - 1))))
+
+        if self.page != self.last_page:
+            g.add((page_uri, XHV.next, URIRef(page_uri_str_nonum + str(self.page + 1))))
+
         g = g + self.feature_list.collection.to_geosp_graph()
+        g.add((
+            URIRef(self.feature_list.collection.uri),
+            GEOX.featureCount,
+            Literal(self.feature_list.feature_count, datatype=XSD.integer)
+        ))
 
         for f in self.feature_list.features:
             g = g + Feature(f[0]).to_geosp_graph()
+            g.add((URIRef(f[0]), DCTERMS.isPartOf, URIRef(self.feature_list.collection.uri)))
 
         # serialise in the appropriate RDF format
         if self.mediatype in ["application/rdf+json", "application/json"]:
