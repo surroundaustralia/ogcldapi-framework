@@ -11,6 +11,7 @@ from enum import Enum
 from geomet import wkt
 from geojson_rewind import rewind
 import markdown
+import gzip
 
 
 class GeometryRole(Enum):
@@ -276,9 +277,9 @@ class FeatureRenderer(Renderer):
 
         # serialise in the appropriate RDF format
         if self.mediatype in ["application/rdf+json", "application/json"]:
-            return Response(g.serialize(format="json-ld"), mimetype=self.mediatype, headers=self.headers)
+            return Response(g.serialize(format="json-ld").decode(), mimetype=self.mediatype, headers=self.headers)
         elif self.mediatype in Renderer.RDF_MEDIA_TYPES:
-            return Response(g.serialize(format=self.mediatype), mimetype=self.mediatype, headers=self.headers)
+            return Response(g.serialize(format=self.mediatype).decode(), mimetype=self.mediatype, headers=self.headers)
         else:
             return Response(
                 "The Media Type you requested cannot be serialized to",

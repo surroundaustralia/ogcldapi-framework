@@ -2,7 +2,7 @@ from typing import List
 from api.model.link import *
 from flask import Response, render_template
 from rdflib import URIRef, Literal
-from rdflib.namespace import DCAT, DCTERMS
+from rdflib.namespace import DCAT, DCTERMS, RDF
 from api.model.profiles import *
 from api.config import *
 import json

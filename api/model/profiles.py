@@ -8,7 +8,7 @@ profile_openapi = Profile(
     comment="The OpenAPI Specification (OAS) defines a standard, language-agnostic interface to RESTful APIs which "
             "allows both humans and computers to discover and understand the capabilities of the service without "
             "access to source code, documentation, or through network traffic inspection.",
-    mediatypes=["text/html", "application/geo+json", "application/json"],
+    mediatypes=["text/html", "application/geo+json", "application/json", "application/vnd.oai.openapi+json;version=3.0"],
     default_mediatype="application/geo+json",
     languages=["en"],  # default 'en' only for now
     default_language="en",

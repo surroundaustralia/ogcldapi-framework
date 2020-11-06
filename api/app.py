@@ -3,19 +3,28 @@ from flask import (
     Flask,
     request,
     render_template,
-    url_for,
     jsonify,
     Blueprint,
     Response
 )
-from flask_restx import Namespace, reqparse, Api, Resource
+from flask_restx import Api, Resource
 from config import *
 from pyldapi import Renderer
 from model import *
-from rdflib import Graph, Literal, URIRef
-from rdflib.namespace import DCAT, DCTERMS, RDF
+from rdflib import Literal
+from rdflib.namespace import DCTERMS, RDF
+from flask_compress import Compress
 
 app = Flask(__name__, template_folder=TEMPLATES_DIR, static_folder=STATIC_DIR)
+app.config["COMPRESS_MIMETYPES"] = [
+    'text/html',
+    'text/css',
+    'text/xml',
+    'application/json',
+    'application/geo+json',
+    'application/javascript',
+] + Renderer.RDF_MEDIA_TYPES
+Compress(app)
 
 blueprint = Blueprint('api', __name__)
 
@@ -27,8 +36,7 @@ def landing_page():
     except Exception as e:
         logging.debug(e)
         return Response(
-            "The API cannot connect to its data source, Check your SPARQL endpoint (you gave {}) "
-            "and the query".format(SPARQL_ENDPOINT),
+            "ERROR: " + str(e),
             status=500,
             mimetype="text/plain"
         )

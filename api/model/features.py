@@ -307,6 +307,7 @@ class FeaturesRenderer(ContainerRenderer):
         page_json = {
             "links": [x.__dict__ for x in self.links],
             "collection": self.feature_list.collection.to_dict(),
+            "items": self.members,
         }
 
         return Response(
@@ -319,6 +320,7 @@ class FeaturesRenderer(ContainerRenderer):
         page_json = {
             "links": [x.__dict__ for x in self.links],
             "collection": self.feature_list.collection.to_geo_json_dict(),
+            "items": self.members,
         }
 
         return Response(

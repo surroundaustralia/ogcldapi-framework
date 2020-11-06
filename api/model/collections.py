@@ -70,9 +70,9 @@ class CollectionsRenderer(ContainerRenderer):
             self.start = (self.page - 1) * self.per_page
             self.end = self.start + self.per_page
 
-        collections = Collections().collections
-        self.collections_count = len(collections)
-        requested_collections = collections[self.start:self.end]
+        self.collections = Collections().collections
+        self.collections_count = len(self.collections)
+        requested_collections = self.collections[self.start:self.end]
 
         super().__init__(
             request,
@@ -99,15 +99,24 @@ class CollectionsRenderer(ContainerRenderer):
         if response is not None:
             return response
         elif self.profile == "oai":
-            if self.mediatype == "application/json":
+            if self.mediatype in ["application/json", "application/vnd.oai.openapi+json;version=3.0", "application/geo+json"]:
                 return self._render_oai_json()
             else:
                 return self._render_oai_html()
 
     def _render_oai_json(self):
+        collection_dicts = [
+            {
+                "uri": x[0],
+                "id": x[1],
+                "title": x[2],
+                "description": x[3]
+            } for x in self.collections
+        ]
+
         page_json = {
             "links": [x.__dict__ for x in self.links],
-            "collections": [x.to_dict() for x in self.collections]
+            "collections": collection_dicts
         }
 
         return Response(
