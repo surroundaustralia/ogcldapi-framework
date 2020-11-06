@@ -10,7 +10,7 @@ from flask import (
 from flask_restx import Api, Resource
 from api.config import *
 from pyldapi import Renderer
-from model import *
+from api.model import *
 from rdflib import Literal
 from rdflib.namespace import DCTERMS, RDF
 from flask_compress import Compress

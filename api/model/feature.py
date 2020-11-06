@@ -4,14 +4,12 @@ from api.config import *
 from api.model.link import *
 import json
 from flask import Response, render_template
-from api.model.spatial_object import SpatialExtent, TemporalExtent
 from rdflib import URIRef, Literal
 from rdflib.namespace import DCTERMS
 from enum import Enum
 from geomet import wkt
 from geojson_rewind import rewind
 import markdown
-import gzip
 
 
 class GeometryRole(Enum):

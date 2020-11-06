@@ -1,9 +1,8 @@
-from pyldapi import Renderer, ContainerRenderer
+from pyldapi import ContainerRenderer
 from typing import List
 from api.model.profiles import *
 from api.config import *
 from api.model.link import *
-from api.model.collection import Collection
 import json
 from flask import Response, render_template
 from flask_paginate import Pagination
