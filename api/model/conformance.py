@@ -1,7 +1,7 @@
 from api.model.link import *
 from flask import Response, render_template
 from api.model.profiles import *
-from config import *
+from api.config import *
 import json
 
 
