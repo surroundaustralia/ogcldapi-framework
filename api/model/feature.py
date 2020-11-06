@@ -4,8 +4,8 @@ from api.config import *
 from api.model.link import *
 import json
 from flask import Response, render_template
-from rdflib import URIRef, Literal
-from rdflib.namespace import DCTERMS, RDF
+from rdflib import URIRef, Literal, BNode
+from rdflib.namespace import DCTERMS, RDF, RDFS
 from enum import Enum
 from geomet import wkt
 from geojson_rewind import rewind
