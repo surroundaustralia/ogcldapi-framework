@@ -8,7 +8,7 @@ from flask import (
     Response
 )
 from flask_restx import Api, Resource
-from config import *
+from api.config import *
 from pyldapi import Renderer
 from model import *
 from rdflib import Literal

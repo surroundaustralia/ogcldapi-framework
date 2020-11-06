@@ -1,4 +1,5 @@
 flask
+flask_compress
 git+https://github.com/RDFLib/rdflib.git@master#egg=rdflib
 pyldapi
 markdown
