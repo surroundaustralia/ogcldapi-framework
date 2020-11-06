@@ -31,7 +31,7 @@ profile_geosparql = Profile(
     label="GeoSPARQL",
     comment="An RDF/OWL vocabulary for representing spatial information",
     mediatypes=Renderer.RDF_MEDIA_TYPES,
-    default_mediatype="text/html",
+    default_mediatype="text/turtle",
     languages=["en"],  # default 'en' only for now
     default_language="en",
 )
