@@ -156,11 +156,10 @@ class FeaturesList:
                    dcterms:isPartOf <{}> .
                 ?f geo:hasGeometry/geox:asDGGS ?dggs .
 
-                BIND (STRBEFORE(STRAFTER(STR(?dggs), "POLYGON ("), ")")AS ?coords)
-
-                FILTER CONTAINS(?coords, "{}")
+                FILTER CONTAINS(STR(?dggs), "{}")
             }}
             """.format(self.collection.uri, self.request.values.get("bbox"))
+
         # TODO: update as RDFlib updates
         # for r in get_graph().query(q):
         #     features_uris.append((r["f"], r["prefLabel"]))
@@ -240,7 +239,7 @@ class FeaturesRenderer(ContainerRenderer):
                 None,
                 None,
                 [(LANDING_PAGE_URL + "/collections/" + self.feature_list.collection.identifier + "/items/" + x[1], x[2]) for x in self.feature_list.features],
-                self.feature_list.collection.feature_count,
+                self.feature_list.feature_count,
                 profiles={"oai": profile_openapi, "geosp": profile_geosparql},
                 default_profile_token="oai"
             )
