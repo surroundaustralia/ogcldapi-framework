@@ -15,6 +15,13 @@ from rdflib import Literal
 from rdflib.namespace import DCTERMS, RDF
 from flask_compress import Compress
 
+logging.basicConfig(
+    filename=LOGFILE,
+    level=logging.DEBUG,
+    datefmt="%Y-%m-%d %H:%M:%S",
+    format="%(asctime)s %(levelname)s %(filename)s:%(lineno)s %(message)s",
+)
+
 app = Flask(__name__, template_folder=TEMPLATES_DIR, static_folder=STATIC_DIR)
 app.config["COMPRESS_MIMETYPES"] = [
     'text/html',
@@ -192,11 +199,4 @@ def render_api_error(title, status, message, mediatype="text/html"):
 
 
 if __name__ == "__main__":
-    logging.basicConfig(
-        filename=LOGFILE,
-        level=logging.DEBUG,
-        datefmt="%Y-%m-%d %H:%M:%S",
-        format="%(asctime)s %(levelname)s %(filename)s:%(lineno)s %(message)s",
-    )
-
     app.run(debug=DEBUG, threaded=True, port=PORT)
