@@ -9,7 +9,7 @@ import json
 from flask import Response, render_template
 from flask_paginate import Pagination
 from rdflib import Graph, Literal, URIRef
-from rdflib.namespace import DCTERMS, XSD
+from rdflib.namespace import DCTERMS, XSD, RDF
 import re
 
 

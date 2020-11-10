@@ -6,7 +6,7 @@ import json
 from flask import Response, render_template
 import markdown
 from rdflib import URIRef, Literal
-from rdflib.namespace import DCTERMS
+from rdflib.namespace import DCTERMS, RDF
 
 
 class Collection(object):

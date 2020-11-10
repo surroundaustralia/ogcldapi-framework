@@ -152,26 +152,29 @@ class LandingPageRenderer(Renderer):
         )
 
     def _render_dcat_rdf(self):
-        item_graph = Graph()
-        item_graph.bind("dggs", DGGS)
-        item_uri = URIRef(self.dataset.uri)
-        item_id = self.dataset.uri.split("/")[-1]
-        item_graph.add((item_uri, RDF.type, DGGS.Zone))
-        item_graph.add((item_uri, RDFS.label, Literal("Zone {}".format(item_id))))
-
-        for neighbour in calculate_neighbours(item_id):
-            direction_uri = URIRef(URI_BASE_DATASET[neighbour[0].title()])
-            neighbour_uri = URIRef(URI_BASE_ZONE[neighbour[1]])
-            bn = BNode()
-            item_graph.add((bn, DGGS.neighbour, neighbour_uri))
-            item_graph.add((bn, DGGS.direction, direction_uri))
-            item_graph.add((item_uri, DGGS.directionalisedNeighbour, bn))
+        g = Graph()
+        g.bind("dcat", DCAT)
+        g.add((
+            URIRef(self.landing_page.uri),
+            RDF.type,
+            DCAT.Dataset
+        ))
+        g.add((
+            URIRef(self.landing_page.uri),
+            DCTERMS.title,
+            Literal(self.landing_page.title)
+        ))
+        g.add((
+            URIRef(self.landing_page.uri),
+            DCTERMS.description,
+            Literal(self.landing_page.description)
+        ))
 
         # serialise in the appropriate RDF format
         if self.mediatype in ["application/rdf+json", "application/json"]:
-            return Response(item_graph.serialize(format="json-ld"), mimetype=self.mediatype)
+            return Response(g.serialize(format="json-ld"), mimetype=self.mediatype)
         else:
-            return Response(item_graph.serialize(format=self.mediatype), mimetype=self.mediatype)
+            return Response(g.serialize(format=self.mediatype), mimetype=self.mediatype)
 
     def _render_dcat_html(self):
         _template_context = {
