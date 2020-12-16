@@ -5,7 +5,7 @@ from api.model.link import *
 import json
 from flask import Response, render_template
 from rdflib import URIRef, Literal, BNode
-from rdflib.namespace import DCTERMS, RDF, RDFS
+from rdflib.namespace import DCTERMS, RDF, RDFS, XSD
 from enum import Enum
 from geomet import wkt
 from geojson_rewind import rewind

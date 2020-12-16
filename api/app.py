@@ -38,6 +38,7 @@ blueprint = Blueprint('api', __name__)
 
 @app.route("/")
 def landing_page():
+    logging.debug("landing_page()")
     try:
         return LandingPageRenderer(request).render()
     except Exception as e:

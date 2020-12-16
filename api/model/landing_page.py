@@ -7,6 +7,7 @@ from api.model.profiles import *
 from api.config import *
 import json
 import markdown
+import logging
 
 
 class LandingPage:
@@ -14,6 +15,7 @@ class LandingPage:
             self,
             other_links: List[Link] = None,
     ):
+        logging.debug("LandingPage()")
         self.uri = LANDING_PAGE_URL
 
         # make dummy Landing Page data
@@ -25,6 +27,7 @@ class LandingPage:
                     self.title = str(o)
                 elif p == DCTERMS.description:
                     self.description = markdown.markdown(o)
+        logging.debug("LandingPage() RDF loops")
 
         # make links
         self.links = [
@@ -67,6 +70,7 @@ class LandingPage:
         # Others
         if other_links is not None:
             self.links.extend(other_links)
+        logging.debug("LandingPage() complete")
 
 
 class LandingPageRenderer(Renderer):
@@ -75,6 +79,7 @@ class LandingPageRenderer(Renderer):
             request,
             other_links: List[Link] = None,
     ):
+        logging.debug("LandingPageRenderer()")
         self.landing_page = LandingPage(other_links=other_links)
 
         super().__init__(request, self.landing_page.uri, {"oai": profile_openapi, "dcat": profile_dcat}, "oai")
@@ -85,6 +90,7 @@ class LandingPageRenderer(Renderer):
         self.ALLOWED_PARAMS = ["_profile", "_view", "_mediatype", "_format"]
 
     def render(self):
+        logging.debug("LandingPageRenderer.render()")
         for v in self.request.values.items():
             if v[0] not in self.ALLOWED_PARAMS:
                 return Response("The parameter {} you supplied is not allowed".format(v[0]), status=400)

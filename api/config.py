@@ -24,6 +24,8 @@ SPARQL_ENDPOINT = os.getenv("SPARQL_ENDPOINT", "http://example.org/service/sparq
 
 
 def get_graph():
+    import logging
+    logging.debug("get_graph() for {}".format(SPARQL_ENDPOINT))
     g = Graph("SPARQLStore")
     g.open(SPARQL_ENDPOINT)
 
