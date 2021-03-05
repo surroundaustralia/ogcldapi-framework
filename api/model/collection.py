@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Union
 from api.model.profiles import *
 from api.config import *
 from api.model.link import *
@@ -12,10 +12,10 @@ from rdflib.namespace import DCTERMS, RDF
 class Collection(object):
     def __init__(
             self,
-            uri: str,
+            uri: Union[str, URIRef],
             other_links: List[Link] = None,
     ):
-        self.uri = uri
+        self.uri = uri if type(uri) == str else str(uri)
         g = get_graph()
         # Feature properties
         self.description = None
